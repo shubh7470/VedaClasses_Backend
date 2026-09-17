@@ -22,8 +22,8 @@ const leadSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ['FREE_MCQ_TEST', 'GOOGLE_SIGNUP', 'OTP_SIGNUP', 'WEBSITE', 'ADMIN_MANUAL'],
-      default: 'OTP_SIGNUP',
+      enum: ['FREE_MCQ_TEST', 'GOOGLE_SIGNUP', 'OTP_SIGNUP', 'WEBSITE', 'ADMIN_MANUAL', 'SELF_REGISTER'],
+      default: 'WEBSITE',
       index: true,
     },
     studentId: {

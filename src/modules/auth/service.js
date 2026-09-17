@@ -18,15 +18,22 @@ import {
 
 export const authService = {
   /**
-   * User login with email and password
+   * User login with email or mobile phone number and password
    */
-  login: async ({ email, password, deviceInfo = {}, ipAddress = 'Unknown' }) => {
-    const user = await User.findOne({ email: email.toLowerCase().trim() })
+  login: async ({ email, identifier, phone, password, deviceInfo = {}, ipAddress = 'Unknown' }) => {
+    const cleanId = (identifier || email || phone || '').toLowerCase().trim();
+    if (!cleanId) {
+      throw new AppError('Email or mobile number is required.', 400, 'MISSING_IDENTIFIER');
+    }
+
+    const user = await User.findOne({
+      $or: [{ email: cleanId }, { phone: cleanId }],
+    })
       .select('+passwordHash')
       .populate('roleIds');
 
     if (!user) {
-      throw new AppError('Invalid email or password.', 401, 'INVALID_CREDENTIALS');
+      throw new AppError('Invalid email/mobile number or password.', 401, 'INVALID_CREDENTIALS');
     }
 
     if (user.status !== 'ACTIVE') {
@@ -79,6 +86,95 @@ export const authService = {
         role,
         studentType: studentData?.studentType || user.studentType || 'REGULAR',
         isEnrolled: studentData?.isEnrolled ?? true,
+      },
+    };
+  },
+
+  /**
+   * Self-registration for Online Guest Student (Name, Phone, Email, Password)
+   */
+  registerStudent: async ({ firstName, lastName = '', email, phone, password, deviceInfo = {}, ipAddress = 'Unknown' }) => {
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanPhone = phone.trim();
+
+    // Check if user already exists with email or phone
+    const existingUser = await User.findOne({
+      $or: [{ email: cleanEmail }, { phone: cleanPhone }],
+    });
+
+    if (existingUser) {
+      throw new AppError('An account with this email or mobile number already exists.', 400, 'USER_ALREADY_EXISTS');
+    }
+
+    const studentRole = await Role.findOne({ name: ROLES.STUDENT });
+    if (!studentRole) {
+      throw new AppError('STUDENT role is not configured.', 500, 'ROLE_MISSING');
+    }
+
+    const passwordHash = await hashPassword(password);
+    const fullName = `${firstName} ${lastName}`.trim();
+
+    const user = await User.create({
+      name: fullName,
+      email: cleanEmail,
+      phone: cleanPhone,
+      passwordHash,
+      authProvider: 'LOCAL',
+      studentType: 'ONLINE_GUEST',
+      roleIds: [studentRole._id],
+      status: 'ACTIVE',
+      lastLoginAt: new Date(),
+    });
+
+    // Create Lead record
+    const lead = await Lead.create({
+      name: fullName,
+      email: cleanEmail,
+      phone: cleanPhone,
+      source: 'SELF_REGISTER',
+      status: 'NEW',
+    });
+
+    // Create Guest Student profile
+    await Student.create({
+      userId: user._id,
+      studentType: 'ONLINE_GUEST',
+      isEnrolled: false,
+      leadId: lead._id,
+      personal: { firstName, lastName },
+      contact: { email: cleanEmail, phone: cleanPhone },
+    });
+
+    const tokenPayload = {
+      userId: user._id.toString(),
+      email: user.email,
+      role: ROLES.STUDENT,
+      studentType: 'ONLINE_GUEST',
+      isEnrolled: false,
+    };
+    const accessToken = generateAccessToken(tokenPayload);
+    const refreshToken = generateRefreshToken({ userId: user._id.toString() });
+
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000);
+    await Session.create({
+      userId: user._id,
+      refreshTokenHash: hashToken(refreshToken),
+      device: deviceInfo,
+      ipAddress,
+      expiresAt,
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: ROLES.STUDENT,
+        studentType: 'ONLINE_GUEST',
+        isEnrolled: false,
       },
     };
   },

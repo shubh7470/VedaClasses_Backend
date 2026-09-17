@@ -1,0 +1,783 @@
+{
+  "students": [
+    {
+      "_id": "6aaae6bba96d45c2a25d0508",
+      "userId": "6aaae6bba96d45c2a25d0506",
+      "studentType": "ONLINE_GUEST",
+      "isEnrolled": false,
+      "leadId": "6aaae6bba96d45c2a25d0507",
+      "personal": {
+        "firstName": "TestStudent",
+        "lastName": "Kumar",
+        "dob": null,
+        "gender": "OTHER"
+      },
+      "contact": {
+        "phone": "985619148",
+        "email": "teststudent1789585083154@gmail.com",
+        "address": {
+          "line1": "",
+          "city": "",
+          "state": "",
+          "pincode": ""
+        }
+      },
+      "guardian": {
+        "name": "",
+        "phone": "",
+        "relation": "FATHER"
+      },
+      "academic": {
+        "schoolName": "",
+        "class": "",
+        "board": ""
+      },
+      "status": "ACTIVE",
+      "createdAt": "2026-09-16T18:58:03.517Z",
+      "updatedAt": "2026-09-16T18:58:03.517Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac30274fed6248b981b53b",
+      "userId": "6aac30274fed6248b981b539",
+      "studentType": "ONLINE_GUEST",
+      "isEnrolled": false,
+      "leadId": "6aac30274fed6248b981b53a",
+      "personal": {
+        "firstName": "Test",
+        "lastName": "Student",
+        "dob": null,
+        "gender": "OTHER"
+      },
+      "contact": {
+        "phone": "7478996522",
+        "email": "shubh123@gmail.com",
+        "address": {
+          "line1": "",
+          "city": "",
+          "state": "",
+          "pincode": ""
+        }
+      },
+      "guardian": {
+        "name": "",
+        "phone": "",
+        "relation": "FATHER"
+      },
+      "academic": {
+        "schoolName": "",
+        "class": "",
+        "board": ""
+      },
+      "status": "ACTIVE",
+      "createdAt": "2026-09-17T18:23:35.301Z",
+      "updatedAt": "2026-09-17T18:23:35.301Z",
+      "__v": 0
+    }
+  ],
+  "leads": [
+    {
+      "_id": "6aaae6bba96d45c2a25d0507",
+      "name": "TestStudent Kumar",
+      "email": "teststudent1789585083154@gmail.com",
+      "phone": "985619148",
+      "source": "SELF_REGISTER",
+      "studentId": null,
+      "status": "NEW",
+      "convertedToAdmission": false,
+      "notes": "",
+      "createdAt": "2026-09-16T18:58:03.513Z",
+      "updatedAt": "2026-09-16T18:58:03.513Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac30274fed6248b981b53a",
+      "name": "Test Student",
+      "email": "shubh123@gmail.com",
+      "phone": "7478996522",
+      "source": "SELF_REGISTER",
+      "studentId": null,
+      "status": "NEW",
+      "convertedToAdmission": false,
+      "notes": "",
+      "createdAt": "2026-09-17T18:23:35.297Z",
+      "updatedAt": "2026-09-17T18:23:35.297Z",
+      "__v": 0
+    }
+  ],
+  "roles": [
+    {
+      "_id": "6aaade790b2b8fe53235df52",
+      "name": "ADMIN",
+      "permissions": [
+        "student.create",
+        "student.read",
+        "student.update",
+        "student.delete",
+        "teacher.create",
+        "teacher.read",
+        "teacher.update",
+        "teacher.delete",
+        "course.create",
+        "course.read",
+        "course.update",
+        "course.delete",
+        "batch.create",
+        "batch.read",
+        "batch.update",
+        "batch.delete",
+        "attendance.create",
+        "attendance.read",
+        "attendance.update",
+        "fees.create",
+        "fees.read",
+        "fees.update",
+        "payment.read",
+        "payment.create",
+        "payment.refund",
+        "exam.create",
+        "exam.read",
+        "exam.update",
+        "exam.publish",
+        "question.create",
+        "question.read",
+        "competition.create",
+        "competition.read",
+        "competition.update",
+        "announcement.create",
+        "announcement.read",
+        "notification.send",
+        "payroll.generate",
+        "payroll.read",
+        "payroll.pay",
+        "report.read",
+        "audit.read"
+      ],
+      "isSystemRole": true,
+      "createdAt": "2026-09-16T18:22:49.803Z",
+      "updatedAt": "2026-09-16T18:22:49.803Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaade790b2b8fe53235df53",
+      "name": "TEACHER",
+      "permissions": [
+        "student.read",
+        "course.read",
+        "batch.read",
+        "attendance.create",
+        "attendance.read",
+        "exam.create",
+        "exam.read",
+        "exam.update",
+        "question.create",
+        "question.read",
+        "announcement.read"
+      ],
+      "isSystemRole": true,
+      "createdAt": "2026-09-16T18:22:49.827Z",
+      "updatedAt": "2026-09-16T18:22:49.827Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaade790b2b8fe53235df54",
+      "name": "STUDENT",
+      "permissions": [
+        "course.read",
+        "batch.read",
+        "announcement.read"
+      ],
+      "isSystemRole": true,
+      "createdAt": "2026-09-16T18:22:49.838Z",
+      "updatedAt": "2026-09-16T18:22:49.838Z",
+      "__v": 0
+    }
+  ],
+  "mcqquestions": [
+    {
+      "_id": "6aaae4dd0d5f24b54545fb46",
+      "setId": "6aaae104de09670373d246f7",
+      "questionNumber": 1,
+      "question": "Express the density 13 g/cm3 in kg/m3:",
+      "imageUrl": "",
+      "options": [
+        {
+          "id": "A",
+          "text": "A",
+          "image": ""
+        },
+        {
+          "id": "B",
+          "text": "B",
+          "image": ""
+        },
+        {
+          "id": "C",
+          "text": "C",
+          "image": ""
+        },
+        {
+          "id": "D",
+          "text": "D",
+          "image": ""
+        }
+      ],
+      "correctOption": "A",
+      "explanation": "",
+      "explanationImage": "",
+      "createdBy": "6aaade7a0b2b8fe53235df55",
+      "createdAt": "2026-09-16T18:50:05.017Z",
+      "updatedAt": "2026-09-16T18:50:05.017Z",
+      "__v": 0
+    }
+  ],
+  "mcqsets": [
+    {
+      "_id": "6aaae104de09670373d246f7",
+      "title": "ROtational Motion",
+      "subject": "Physics",
+      "topicName": "Moment Of Inertia",
+      "accessType": "FREE",
+      "price": 0,
+      "difficulty": "MEDIUM",
+      "marksPerQuestion": 4,
+      "negativeMarks": 1,
+      "durationMinutes": 30,
+      "passingMarks": 0,
+      "status": "PUBLISHED",
+      "totalQuestionsCount": 1,
+      "createdBy": "6aaade7a0b2b8fe53235df55",
+      "createdAt": "2026-09-16T18:33:40.603Z",
+      "updatedAt": "2026-09-16T18:50:05.021Z",
+      "__v": 0
+    }
+  ],
+  "sessions": [
+    {
+      "_id": "6aaadebc0b2b8fe53235df56",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "d0178875c0f0bdc481962616af27d655cc433b36fc6a285cc2ca6cafb96a688a",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-23T18:23:56.534Z",
+      "createdAt": "2026-09-16T18:23:56.536Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaadebc0b2b8fe53235df57",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "d0178875c0f0bdc481962616af27d655cc433b36fc6a285cc2ca6cafb96a688a",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-23T18:23:56.645Z",
+      "createdAt": "2026-09-16T18:23:56.646Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaadebc0b2b8fe53235df58",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "d0178875c0f0bdc481962616af27d655cc433b36fc6a285cc2ca6cafb96a688a",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-23T18:23:56.649Z",
+      "createdAt": "2026-09-16T18:23:56.650Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaadebc0b2b8fe53235df59",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "d0178875c0f0bdc481962616af27d655cc433b36fc6a285cc2ca6cafb96a688a",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-23T18:23:56.656Z",
+      "createdAt": "2026-09-16T18:23:56.657Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaae3720d5f24b54545fb45",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "90026da96bbe079bff4519a153ed2ae736964b327473476f513166fa6fab6305",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-23T18:44:02.943Z",
+      "createdAt": "2026-09-16T18:44:02.946Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaae6ab2f61138c5ac98e40",
+      "userId": "6aaae6ab2f61138c5ac98e3e",
+      "refreshTokenHash": "97277af9751811d4a8e5712f9b804f16d87b8b780f72d7fd4df58b8aaad55012",
+      "device": {
+        "type": "WEB",
+        "browser": "Unknown",
+        "os": "Unknown"
+      },
+      "ipAddress": "::ffff:127.0.0.1",
+      "expiresAt": "2026-09-23T18:57:47.798Z",
+      "createdAt": "2026-09-16T18:57:47.800Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaae6ac2f61138c5ac98e41",
+      "userId": "6aaae6ab2f61138c5ac98e3e",
+      "refreshTokenHash": "ee6798789bacf544106e6228f91f02b0675c2fe2840e1c0055b54b1acb465d4f",
+      "device": {
+        "type": "WEB",
+        "browser": "Unknown",
+        "os": "Unknown"
+      },
+      "ipAddress": "::ffff:127.0.0.1",
+      "expiresAt": "2026-09-23T18:57:48.118Z",
+      "createdAt": "2026-09-16T18:57:48.119Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaae6bba96d45c2a25d0509",
+      "userId": "6aaae6bba96d45c2a25d0506",
+      "refreshTokenHash": "230db578959fcecdb44e73c0bb61fb14907d5451ec2ad5f487239e15df948a88",
+      "device": {
+        "type": "WEB",
+        "browser": "Unknown",
+        "os": "Unknown"
+      },
+      "ipAddress": "::ffff:127.0.0.1",
+      "expiresAt": "2026-09-23T18:58:03.522Z",
+      "createdAt": "2026-09-16T18:58:03.523Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaae6bba96d45c2a25d050a",
+      "userId": "6aaae6bba96d45c2a25d0506",
+      "refreshTokenHash": "230db578959fcecdb44e73c0bb61fb14907d5451ec2ad5f487239e15df948a88",
+      "device": {
+        "type": "WEB",
+        "browser": "Unknown",
+        "os": "Unknown"
+      },
+      "ipAddress": "::ffff:127.0.0.1",
+      "expiresAt": "2026-09-23T18:58:03.804Z",
+      "createdAt": "2026-09-16T18:58:03.804Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaae6bca96d45c2a25d050b",
+      "userId": "6aaae6bba96d45c2a25d0506",
+      "refreshTokenHash": "e9bb26de6a48db843fdb662ccc1ab9924129e6f9604d3c609edc7f808f8a2b2c",
+      "device": {
+        "type": "WEB",
+        "browser": "Unknown",
+        "os": "Unknown"
+      },
+      "ipAddress": "::ffff:127.0.0.1",
+      "expiresAt": "2026-09-23T18:58:04.147Z",
+      "createdAt": "2026-09-16T18:58:04.147Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaae6e3a96d45c2a25d050c",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "0452d0871a678171da931476d53c958910d78c6ad04ce80621743d73b7aad97c",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-23T18:58:43.932Z",
+      "createdAt": "2026-09-16T18:58:43.933Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aab95d4a96d45c2a25d050d",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "a89fa6f99bdeafba4aa90d2dbc02e684b4eed89185ac5dd85baa700bbece6ef2",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T07:25:08.621Z",
+      "createdAt": "2026-09-17T07:25:08.622Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aab95d4a96d45c2a25d050e",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "a89fa6f99bdeafba4aa90d2dbc02e684b4eed89185ac5dd85baa700bbece6ef2",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T07:25:08.623Z",
+      "createdAt": "2026-09-17T07:25:08.623Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aab95d4a96d45c2a25d050f",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "a89fa6f99bdeafba4aa90d2dbc02e684b4eed89185ac5dd85baa700bbece6ef2",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T07:25:08.624Z",
+      "createdAt": "2026-09-17T07:25:08.624Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aab95d4a96d45c2a25d0510",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "a89fa6f99bdeafba4aa90d2dbc02e684b4eed89185ac5dd85baa700bbece6ef2",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T07:25:08.629Z",
+      "createdAt": "2026-09-17T07:25:08.630Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aab95d4a96d45c2a25d0511",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "a89fa6f99bdeafba4aa90d2dbc02e684b4eed89185ac5dd85baa700bbece6ef2",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T07:25:08.631Z",
+      "createdAt": "2026-09-17T07:25:08.631Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aab95d4a96d45c2a25d0512",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "a89fa6f99bdeafba4aa90d2dbc02e684b4eed89185ac5dd85baa700bbece6ef2",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T07:25:08.634Z",
+      "createdAt": "2026-09-17T07:25:08.634Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aab95d5a96d45c2a25d0513",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "3f3a6606f85f2a2bc582993f399f44f57e5b8ea300a451d5178c96d6848cdc61",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T07:25:09.931Z",
+      "createdAt": "2026-09-17T07:25:09.932Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aab95d5a96d45c2a25d0514",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "3f3a6606f85f2a2bc582993f399f44f57e5b8ea300a451d5178c96d6848cdc61",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T07:25:09.939Z",
+      "createdAt": "2026-09-17T07:25:09.939Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aab95d5a96d45c2a25d0515",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "3f3a6606f85f2a2bc582993f399f44f57e5b8ea300a451d5178c96d6848cdc61",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T07:25:09.941Z",
+      "createdAt": "2026-09-17T07:25:09.941Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aab95d5a96d45c2a25d0516",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "3f3a6606f85f2a2bc582993f399f44f57e5b8ea300a451d5178c96d6848cdc61",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T07:25:09.943Z",
+      "createdAt": "2026-09-17T07:25:09.943Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac2a864fed6248b981b537",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "84b0e510aee1a66f1591861aa009cc38e4f2e5ee8e1b914846e190208b79530e",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T17:59:34.622Z",
+      "createdAt": "2026-09-17T17:59:34.626Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac2dc94fed6248b981b538",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "9b1a38b55b2ad60c364be6d08383f928bfaed398df7a197e9caeadc42547b8b0",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T18:13:29.650Z",
+      "createdAt": "2026-09-17T18:13:29.651Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac30274fed6248b981b53c",
+      "userId": "6aac30274fed6248b981b539",
+      "refreshTokenHash": "4c4989ce6b3bca906aa88bf2b653e12dcab9a4a796bd42ccc674df6f19ddefdf",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T18:23:35.306Z",
+      "createdAt": "2026-09-17T18:23:35.307Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac33f94fed6248b981b53d",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "bbcc8ce406f4a5d0dd8031825d7ac9806af3f16617f05c26a1f5b8fa0c484399",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T18:39:53.060Z",
+      "createdAt": "2026-09-17T18:39:53.061Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac33f94fed6248b981b53e",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "bbcc8ce406f4a5d0dd8031825d7ac9806af3f16617f05c26a1f5b8fa0c484399",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T18:39:53.062Z",
+      "createdAt": "2026-09-17T18:39:53.062Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac33f94fed6248b981b53f",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "bbcc8ce406f4a5d0dd8031825d7ac9806af3f16617f05c26a1f5b8fa0c484399",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T18:39:53.538Z",
+      "createdAt": "2026-09-17T18:39:53.538Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac33f94fed6248b981b540",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "bbcc8ce406f4a5d0dd8031825d7ac9806af3f16617f05c26a1f5b8fa0c484399",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T18:39:53.539Z",
+      "createdAt": "2026-09-17T18:39:53.540Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac33f94fed6248b981b541",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "bbcc8ce406f4a5d0dd8031825d7ac9806af3f16617f05c26a1f5b8fa0c484399",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T18:39:53.541Z",
+      "createdAt": "2026-09-17T18:39:53.541Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac33f94fed6248b981b542",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "bbcc8ce406f4a5d0dd8031825d7ac9806af3f16617f05c26a1f5b8fa0c484399",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T18:39:53.748Z",
+      "createdAt": "2026-09-17T18:39:53.749Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac33fa4fed6248b981b543",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "4a9e3993ed4c0fdb96b756c732d36fa70cde6628a658b5eb02b4b71488191535",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T18:39:54.209Z",
+      "createdAt": "2026-09-17T18:39:54.210Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac33fa4fed6248b981b544",
+      "userId": "6aaade7a0b2b8fe53235df55",
+      "refreshTokenHash": "4a9e3993ed4c0fdb96b756c732d36fa70cde6628a658b5eb02b4b71488191535",
+      "device": {
+        "type": "WEB",
+        "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+        "os": "\"Linux\""
+      },
+      "ipAddress": "::1",
+      "expiresAt": "2026-09-24T18:39:54.217Z",
+      "createdAt": "2026-09-17T18:39:54.218Z",
+      "__v": 0
+    }
+  ],
+  "users": [
+    {
+      "_id": "6aaade7a0b2b8fe53235df55",
+      "name": "System Administrator",
+      "email": "admin@vedaclasses.com",
+      "phone": "9999999999",
+      "passwordHash": "$2b$12$IB.KauDUbOIZ9TVpbytX3eYBuU5rw2w8jBEcd6ldSf8KENXpZBiNq",
+      "authProvider": "LOCAL",
+      "googleId": null,
+      "studentType": null,
+      "roleIds": [
+        "6aaade790b2b8fe53235df52"
+      ],
+      "status": "ACTIVE",
+      "profileImage": null,
+      "lastLoginAt": "2026-09-17T18:39:54.202Z",
+      "createdAt": "2026-09-16T18:22:50.392Z",
+      "updatedAt": "2026-09-17T18:39:54.203Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaae6ab2f61138c5ac98e3e",
+      "name": "TestStudent Kumar",
+      "email": "teststudent1789585067079@gmail.com",
+      "phone": "989044060",
+      "passwordHash": "$2b$12$iQdpzdjhD4nDGOU0dYu5N.gGNn0b/783ykAVPyHQPTEGvQha.fU3q",
+      "authProvider": "LOCAL",
+      "googleId": null,
+      "studentType": "ONLINE_GUEST",
+      "roleIds": [
+        "6aaade790b2b8fe53235df54"
+      ],
+      "status": "ACTIVE",
+      "profileImage": null,
+      "lastLoginAt": "2026-09-16T18:57:48.115Z",
+      "createdAt": "2026-09-16T18:57:47.512Z",
+      "updatedAt": "2026-09-16T18:57:48.116Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaae6bba96d45c2a25d0506",
+      "name": "TestStudent Kumar",
+      "email": "teststudent1789585083154@gmail.com",
+      "phone": "985619148",
+      "passwordHash": "$2b$12$4bt3bUloJUEZ.IqqlyiKq.hLYZWpJ14XXuBxw6ARbWgDAzlvixj0a",
+      "authProvider": "LOCAL",
+      "googleId": null,
+      "studentType": "ONLINE_GUEST",
+      "roleIds": [
+        "6aaade790b2b8fe53235df54"
+      ],
+      "status": "ACTIVE",
+      "profileImage": null,
+      "lastLoginAt": "2026-09-16T18:58:04.144Z",
+      "createdAt": "2026-09-16T18:58:03.508Z",
+      "updatedAt": "2026-09-16T18:58:04.144Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac30274fed6248b981b539",
+      "name": "Test Student",
+      "email": "shubh123@gmail.com",
+      "phone": "7478996522",
+      "passwordHash": "$2b$12$hg4OKZOgH9rOxvVy5/HT.eEhIhmEqaNJMB9PAaSVv9Rg09mK.opz2",
+      "authProvider": "LOCAL",
+      "googleId": null,
+      "studentType": "ONLINE_GUEST",
+      "roleIds": [
+        "6aaade790b2b8fe53235df54"
+      ],
+      "status": "ACTIVE",
+      "profileImage": null,
+      "lastLoginAt": "2026-09-17T18:23:35.294Z",
+      "createdAt": "2026-09-17T18:23:35.295Z",
+      "updatedAt": "2026-09-17T18:23:35.295Z",
+      "__v": 0
+    }
+  ]
+}

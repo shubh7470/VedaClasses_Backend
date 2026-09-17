@@ -2,6 +2,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import {
   login,
+  registerStudent,
   sendOtp,
   verifyOtp,
   googleAuth,
@@ -50,7 +51,8 @@ const otpRateLimiter = rateLimit({
 });
 
 // Public Authentication Endpoints
-router.post('/login', loginRateLimiter, validateRequest(loginSchema), login);
+router.post('/register-student', registerStudent);
+router.post('/login', loginRateLimiter, login);
 router.post('/send-otp', otpRateLimiter, validateRequest(sendOtpSchema), sendOtp);
 router.post('/verify-otp', validateRequest(verifyOtpSchema), verifyOtp);
 router.post('/google', validateRequest(googleAuthSchema), googleAuth);

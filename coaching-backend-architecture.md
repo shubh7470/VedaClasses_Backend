@@ -448,149 +448,184 @@ Bulk payload:
 
 ---
 
-## 13. Fees Module
+## 13. Fees & Installments Module (Admin-Managed / Manual Payments)
 
-Financial data is kept in **separate, immutable-once-successful** collections: `feePlans`, `invoices`, `payments`, `refunds`.
+Fee management is **installment-based and admin-recorded** (Cash, UPI, Cheque, Bank Transfer). Payment gateway integration (e.g. Razorpay) is replaced with an offline payment ledger and automatic installment tracking.
 
-### `feePlans`
-```json
-{ "_id": "ObjectId", "courseId": "ObjectId", "name": "Monthly Plan", "amount": 5000, "frequency": "MONTHLY", "status": "ACTIVE" }
-```
+Collections: `studentFeeStructures`, `feeInstallments`, `feePayments`
 
-### `invoices`
+### `studentFeeStructures`
 ```json
 {
   "_id": "ObjectId",
-  "invoiceNumber": "INV-2026-00001",
   "studentId": "ObjectId",
   "enrollmentId": "ObjectId",
-  "amount": { "subtotal": 5000, "discount": 500, "tax": 0, "total": 4500 },
+  "courseId": "ObjectId",
+  "grossAmount": 60000,
+  "discount": {
+    "amount": 5000,
+    "reason": "Merit Scholarship",
+    "approvedBy": "ObjectId"
+  },
+  "netPayable": 55000,
+  "totalPaid": 20000,
+  "totalPending": 35000,
+  "status": "PARTIALLY_PAID", // UNPAID, PARTIALLY_PAID, PAID_FULL, OVERDUE
+  "installmentsCount": 3,
+  "createdAt": "Date",
+  "updatedAt": "Date"
+}
+```
+
+### `feeInstallments`
+```json
+{
+  "_id": "ObjectId",
+  "studentFeeStructureId": "ObjectId",
+  "studentId": "ObjectId",
+  "installmentNumber": 1,
+  "title": "1st Installment",
+  "amount": 20000,
+  "paidAmount": 20000,
+  "pendingAmount": 0,
   "dueDate": "Date",
-  "status": "PENDING",
+  "status": "PAID", // PENDING, PARTIALLY_PAID, PAID, OVERDUE
+  "paidAt": "Date"
+}
+```
+
+### `feePayments`
+```json
+{
+  "_id": "ObjectId",
+  "receiptNumber": "REC-2026-00104",
+  "studentId": "ObjectId",
+  "studentFeeStructureId": "ObjectId",
+  "installmentId": "ObjectId",
+  "amountPaid": 15000,
+  "paymentMode": "UPI_DIRECT", // CASH, UPI_DIRECT, BANK_TRANSFER, CHEQUE, CARD_POS
+  "transactionRefNo": "UPI/40891238910",
+  "paymentDate": "Date",
+  "receivedBy": "ObjectId",
+  "remarks": "Paid via PhonePe at office counter",
   "createdAt": "Date"
 }
 ```
 
-### `payments`
-```json
-{
-  "_id": "ObjectId",
-  "paymentNumber": "PAY-2026-00001",
-  "studentId": "ObjectId",
-  "invoiceId": "ObjectId",
-  "amount": 4500,
-  "method": "RAZORPAY",
-  "gateway": { "orderId": "...", "paymentId": "...", "signature": "..." },
-  "status": "SUCCESS",
-  "paidAt": "Date",
-  "createdBy": "ObjectId"
-}
-```
-
 ### APIs
 
 ```text
-POST   /api/v1/fee-plans
-GET    /api/v1/fee-plans
-PATCH  /api/v1/fee-plans/:id
+POST   /api/v1/fees/structures              # Assign total fee & generate installment plan
+GET    /api/v1/fees/structures/:studentId   # Get complete fee breakdown & installment history
+PATCH  /api/v1/fees/structures/:id          # Edit fee structure or apply discount
+GET    /api/v1/fees/dashboard-summary       # Metrics (Total Collected, Total Pending, Overdue count)
+GET    /api/v1/fees/students                # Paginated list of students with fee statuses & pending amounts
 
-POST   /api/v1/invoices
-GET    /api/v1/invoices
-GET    /api/v1/invoices/:id
-
-POST   /api/v1/payments/create-order
-POST   /api/v1/payments/verify
-GET    /api/v1/payments
-GET    /api/v1/payments/:id
-POST   /api/v1/payments/:id/refund
+POST   /api/v1/fees/payments                # Record manual payment (Cash/UPI/Bank/Cheque) & auto-update installments
+GET    /api/v1/fees/payments                # Audit log of recorded payments
+GET    /api/v1/fees/payments/:id/receipt    # Get printable receipt data / PDF
 ```
 
-### Payment Flow (critical — always verify on backend)
+### Admin Manual Payment Flow
 
 ```text
-Student selects pending fee
-   → Backend creates Razorpay order
-   → Frontend opens payment gateway
-   → Payment success (frontend callback)
-   → Backend VERIFIES signature (never trust frontend alone)
-   → Create Payment record (inside a MongoDB transaction with invoice update)
-   → Generate receipt
-   → Send notification
+Student pays at office (Cash / UPI / Cheque)
+   → Admin opens Student Profile -> Fee Tab
+   → Selects Next Pending Installment
+   → Admin enters: Amount Received, Payment Mode, Ref No / Cheque No, Remarks
+   → Backend executes MongoDB Transaction:
+        1. Creates feePayments entry (Generates REC-2026-XXXXX)
+        2. Deducts amount from oldest pending installment(s)
+        3. Updates totalPaid and totalPending in studentFeeStructure
+        4. Recalculates status (UNPAID -> PARTIALLY_PAID -> PAID_FULL)
+   → Generates printable receipt PDF for Student/Parent
 ```
-
-Use an `Idempotency-Key` header on payment creation so retried requests don't create duplicate payments.
 
 ---
 
-## 14. MCQ / Exam Module
+## 14. MCQ / Exam Module (Topic & Set-Driven with Free/Paid Pricing)
 
-Collections: `subjects`, `questions`, `tests`, `testAttempts`, `testAnswers`
+MCQ Tests are organized into **Topic Sets** (`mcqSets`), containing linked questions (`mcqQuestions`). Each Set defines Access Type (`FREE` or `PAID` with `price`), default difficulty (`EASY`, `MEDIUM`, `HARD`), marks per question, and duration.
 
-### `questions`
+Collections: `mcqSets`, `mcqQuestions`, `mcqAttempts`
 
+### `mcqSets`
 ```json
 {
   "_id": "ObjectId",
-  "subjectId": "ObjectId",
-  "topicId": "ObjectId",
-  "question": "What is 2 + 2?",
-  "options": [{ "id": "A", "text": "3" }, { "id": "B", "text": "4" }, { "id": "C", "text": "5" }],
-  "correctOption": "B",
-  "explanation": "2 + 2 = 4",
-  "difficulty": "EASY",
-  "marks": 1,
-  "negativeMarks": 0,
-  "status": "ACTIVE",
-  "createdBy": "ObjectId"
-}
-```
-
-### `tests`
-
-```json
-{
-  "_id": "ObjectId",
-  "title": "Weekly Physics Test",
-  "subjectIds": [],
-  "questionIds": [],
+  "title": "Rotational Motion - Level 1",
+  "subject": "Physics",
+  "topicName": "Rotational Dynamics",
+  "accessType": "PAID", // FREE, PAID
+  "price": 299, // Price in INR if PAID, 0 if FREE
+  "difficulty": "MEDIUM", // EASY, MEDIUM, HARD
+  "marksPerQuestion": 4,
+  "negativeMarks": 1,
   "durationMinutes": 30,
-  "totalMarks": 50,
   "passingMarks": 20,
-  "startAt": "Date",
-  "endAt": "Date",
-  "status": "PUBLISHED"
+  "status": "PUBLISHED", // DRAFT, PUBLISHED, ARCHIVED
+  "totalQuestionsCount": 15,
+  "createdBy": "ObjectId",
+  "createdAt": "Date"
 }
 ```
 
-### `testAttempts` / `testAnswers`
-
+### `mcqQuestions`
 ```json
 {
   "_id": "ObjectId",
-  "testId": "ObjectId",
+  "setId": "ObjectId",
+  "questionNumber": 1,
+  "question": "What is the moment of inertia of a uniform disc of mass M and radius R about its central axis?",
+  "options": [
+    { "id": "A", "text": "1/2 MR^2" },
+    { "id": "B", "text": "MR^2" },
+    { "id": "C", "text": "2/5 MR^2" },
+    { "id": "D", "text": "1/4 MR^2" }
+  ],
+  "correctOption": "A",
+  "explanation": "Moment of inertia of a uniform disc about its central axis is 1/2 MR^2.",
+  "createdBy": "ObjectId",
+  "createdAt": "Date"
+}
+```
+
+### `mcqAttempts`
+```json
+{
+  "_id": "ObjectId",
+  "setId": "ObjectId",
   "studentId": "ObjectId",
   "startedAt": "Date",
   "submittedAt": "Date",
   "status": "SUBMITTED",
-  "score": 42,
-  "correctAnswers": 42,
-  "wrongAnswers": 8,
-  "unanswered": 0
+  "score": 40,
+  "totalMarks": 60,
+  "correctAnswers": 11,
+  "wrongAnswers": 4,
+  "unanswered": 0,
+  "answers": [
+    { "questionId": "ObjectId", "selectedOption": "A", "isCorrect": true, "marksObtained": 4 }
+  ]
 }
-```
-```json
-{ "attemptId": "ObjectId", "questionId": "ObjectId", "selectedOption": "B", "isCorrect": true, "marks": 1 }
 ```
 
 ### APIs
 
 ```text
-POST/GET/PATCH/DELETE  /api/v1/questions
-POST/GET/PATCH/DELETE  /api/v1/tests
-POST   /api/v1/tests/:id/start
-POST   /api/v1/tests/:id/submit
-GET    /api/v1/tests/:id/results
-GET    /api/v1/me/test-results
+POST   /api/v1/mcq/sets               # Create MCQ Topic/Set (title, subject, FREE/PAID, price, difficulty, marks, duration)
+GET    /api/v1/mcq/sets               # List all MCQ Sets (with filter by Subject, accessType, difficulty)
+GET    /api/v1/mcq/sets/:id           # Get MCQ Set details with all questions
+PATCH  /api/v1/mcq/sets/:id           # Update MCQ Set metadata
+DELETE /api/v1/mcq/sets/:id           # Delete MCQ Set and linked questions
+
+POST   /api/v1/mcq/sets/:setId/questions     # Add a question to an MCQ Set
+PATCH  /api/v1/mcq/questions/:questionId     # Edit a question
+DELETE /api/v1/mcq/questions/:questionId     # Delete a question
+
+POST   /api/v1/mcq/sets/:setId/start         # Start attempt
+POST   /api/v1/mcq/sets/:setId/submit        # Submit answers & get auto-evaluated score
+GET    /api/v1/mcq/sets/:setId/results       # View all student results & ranks for an MCQ Set
 ```
 
 ---

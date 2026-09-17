@@ -35,6 +35,11 @@ const courseSchema = new mongoose.Schema(
       type: [subjectSchema],
       default: [],
     },
+    fee: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     status: {
       type: String,
       enum: ['ACTIVE', 'INACTIVE', 'ARCHIVED'],

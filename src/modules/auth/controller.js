@@ -19,14 +19,44 @@ const getDeviceInfo = (req) => {
   };
 };
 
+export const registerStudent = async (req, res, next) => {
+  try {
+    const { firstName, lastName, email, phone, password } = req.body;
+    const deviceInfo = getDeviceInfo(req);
+    const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown';
+
+    const result = await authService.registerStudent({
+      firstName,
+      lastName,
+      email,
+      phone,
+      password,
+      deviceInfo,
+      ipAddress,
+    });
+
+    res.cookie('refreshToken', result.refreshToken, COOKIE_OPTIONS);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Student registration successful!',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, identifier, phone, password } = req.body;
     const deviceInfo = getDeviceInfo(req);
     const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown';
 
     const result = await authService.login({
       email,
+      identifier,
+      phone,
       password,
       deviceInfo,
       ipAddress,
