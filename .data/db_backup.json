@@ -1,31 +1,79 @@
 {
-  "leads": [
+  "users": [
     {
-      "_id": "6aaae6bba96d45c2a25d0507",
-      "name": "TestStudent Kumar",
-      "email": "teststudent1789585083154@gmail.com",
-      "phone": "985619148",
-      "source": "SELF_REGISTER",
-      "studentId": null,
-      "status": "NEW",
-      "convertedToAdmission": false,
-      "notes": "",
-      "createdAt": "2026-09-16T18:58:03.513Z",
-      "updatedAt": "2026-09-16T18:58:03.513Z",
+      "_id": "6aaade7a0b2b8fe53235df55",
+      "name": "System Administrator",
+      "email": "admin@vedaclasses.com",
+      "phone": "9999999999",
+      "passwordHash": "$2b$12$IB.KauDUbOIZ9TVpbytX3eYBuU5rw2w8jBEcd6ldSf8KENXpZBiNq",
+      "authProvider": "LOCAL",
+      "googleId": null,
+      "studentType": null,
+      "roleIds": [
+        "6aaade790b2b8fe53235df52"
+      ],
+      "status": "ACTIVE",
+      "profileImage": null,
+      "lastLoginAt": "2026-09-24T18:20:48.305Z",
+      "createdAt": "2026-09-16T18:22:50.392Z",
+      "updatedAt": "2026-09-24T18:20:48.306Z",
       "__v": 0
     },
     {
-      "_id": "6aac30274fed6248b981b53a",
+      "_id": "6aaae6ab2f61138c5ac98e3e",
+      "name": "TestStudent Kumar",
+      "email": "teststudent1789585067079@gmail.com",
+      "phone": "989044060",
+      "passwordHash": "$2b$12$iQdpzdjhD4nDGOU0dYu5N.gGNn0b/783ykAVPyHQPTEGvQha.fU3q",
+      "authProvider": "LOCAL",
+      "googleId": null,
+      "studentType": "ONLINE_GUEST",
+      "roleIds": [
+        "6aaade790b2b8fe53235df54"
+      ],
+      "status": "ACTIVE",
+      "profileImage": null,
+      "lastLoginAt": "2026-09-16T18:57:48.115Z",
+      "createdAt": "2026-09-16T18:57:47.512Z",
+      "updatedAt": "2026-09-16T18:57:48.116Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaae6bba96d45c2a25d0506",
+      "name": "TestStudent Kumar",
+      "email": "teststudent1789585083154@gmail.com",
+      "phone": "985619148",
+      "passwordHash": "$2b$12$4bt3bUloJUEZ.IqqlyiKq.hLYZWpJ14XXuBxw6ARbWgDAzlvixj0a",
+      "authProvider": "LOCAL",
+      "googleId": null,
+      "studentType": "ONLINE_GUEST",
+      "roleIds": [
+        "6aaade790b2b8fe53235df54"
+      ],
+      "status": "ACTIVE",
+      "profileImage": null,
+      "lastLoginAt": "2026-09-16T18:58:04.144Z",
+      "createdAt": "2026-09-16T18:58:03.508Z",
+      "updatedAt": "2026-09-16T18:58:04.144Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac30274fed6248b981b539",
       "name": "Test Student",
       "email": "shubh123@gmail.com",
       "phone": "7478996522",
-      "source": "SELF_REGISTER",
-      "studentId": null,
-      "status": "NEW",
-      "convertedToAdmission": false,
-      "notes": "",
-      "createdAt": "2026-09-17T18:23:35.297Z",
-      "updatedAt": "2026-09-17T18:23:35.297Z",
+      "passwordHash": "$2b$12$hg4OKZOgH9rOxvVy5/HT.eEhIhmEqaNJMB9PAaSVv9Rg09mK.opz2",
+      "authProvider": "LOCAL",
+      "googleId": null,
+      "studentType": "ONLINE_GUEST",
+      "roleIds": [
+        "6aaade790b2b8fe53235df54"
+      ],
+      "status": "ACTIVE",
+      "profileImage": null,
+      "lastLoginAt": "2026-09-17T18:23:35.294Z",
+      "createdAt": "2026-09-17T18:23:35.295Z",
+      "updatedAt": "2026-09-17T18:23:35.295Z",
       "__v": 0
     }
   ],
@@ -52,6 +100,94 @@
       "order": 0,
       "createdAt": "2026-09-24T18:09:59.542Z",
       "updatedAt": "2026-09-24T18:09:59.542Z",
+      "__v": 0
+    }
+  ],
+  "roles": [
+    {
+      "_id": "6aaade790b2b8fe53235df52",
+      "name": "ADMIN",
+      "permissions": [
+        "student.create",
+        "student.read",
+        "student.update",
+        "student.delete",
+        "teacher.create",
+        "teacher.read",
+        "teacher.update",
+        "teacher.delete",
+        "course.create",
+        "course.read",
+        "course.update",
+        "course.delete",
+        "batch.create",
+        "batch.read",
+        "batch.update",
+        "batch.delete",
+        "attendance.create",
+        "attendance.read",
+        "attendance.update",
+        "fees.create",
+        "fees.read",
+        "fees.update",
+        "payment.read",
+        "payment.create",
+        "payment.refund",
+        "exam.create",
+        "exam.read",
+        "exam.update",
+        "exam.publish",
+        "question.create",
+        "question.read",
+        "competition.create",
+        "competition.read",
+        "competition.update",
+        "announcement.create",
+        "announcement.read",
+        "notification.send",
+        "payroll.generate",
+        "payroll.read",
+        "payroll.pay",
+        "report.read",
+        "audit.read"
+      ],
+      "isSystemRole": true,
+      "createdAt": "2026-09-16T18:22:49.803Z",
+      "updatedAt": "2026-09-16T18:22:49.803Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaade790b2b8fe53235df53",
+      "name": "TEACHER",
+      "permissions": [
+        "student.read",
+        "course.read",
+        "batch.read",
+        "attendance.create",
+        "attendance.read",
+        "exam.create",
+        "exam.read",
+        "exam.update",
+        "question.create",
+        "question.read",
+        "announcement.read"
+      ],
+      "isSystemRole": true,
+      "createdAt": "2026-09-16T18:22:49.827Z",
+      "updatedAt": "2026-09-16T18:22:49.827Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aaade790b2b8fe53235df54",
+      "name": "STUDENT",
+      "permissions": [
+        "course.read",
+        "batch.read",
+        "announcement.read"
+      ],
+      "isSystemRole": true,
+      "createdAt": "2026-09-16T18:22:49.838Z",
+      "updatedAt": "2026-09-16T18:22:49.838Z",
       "__v": 0
     }
   ],
@@ -90,6 +226,82 @@
       "createdBy": "6aaade7a0b2b8fe53235df55",
       "createdAt": "2026-09-16T18:50:05.017Z",
       "updatedAt": "2026-09-16T18:50:05.017Z",
+      "__v": 0
+    }
+  ],
+  "students": [
+    {
+      "_id": "6aaae6bba96d45c2a25d0508",
+      "userId": "6aaae6bba96d45c2a25d0506",
+      "studentType": "ONLINE_GUEST",
+      "isEnrolled": false,
+      "leadId": "6aaae6bba96d45c2a25d0507",
+      "personal": {
+        "firstName": "TestStudent",
+        "lastName": "Kumar",
+        "dob": null,
+        "gender": "OTHER"
+      },
+      "contact": {
+        "phone": "985619148",
+        "email": "teststudent1789585083154@gmail.com",
+        "address": {
+          "line1": "",
+          "city": "",
+          "state": "",
+          "pincode": ""
+        }
+      },
+      "guardian": {
+        "name": "",
+        "phone": "",
+        "relation": "FATHER"
+      },
+      "academic": {
+        "schoolName": "",
+        "class": "",
+        "board": ""
+      },
+      "status": "ACTIVE",
+      "createdAt": "2026-09-16T18:58:03.517Z",
+      "updatedAt": "2026-09-16T18:58:03.517Z",
+      "__v": 0
+    },
+    {
+      "_id": "6aac30274fed6248b981b53b",
+      "userId": "6aac30274fed6248b981b539",
+      "studentType": "ONLINE_GUEST",
+      "isEnrolled": false,
+      "leadId": "6aac30274fed6248b981b53a",
+      "personal": {
+        "firstName": "Test",
+        "lastName": "Student",
+        "dob": null,
+        "gender": "OTHER"
+      },
+      "contact": {
+        "phone": "7478996522",
+        "email": "shubh123@gmail.com",
+        "address": {
+          "line1": "",
+          "city": "",
+          "state": "",
+          "pincode": ""
+        }
+      },
+      "guardian": {
+        "name": "",
+        "phone": "",
+        "relation": "FATHER"
+      },
+      "academic": {
+        "schoolName": "",
+        "class": "",
+        "board": ""
+      },
+      "status": "ACTIVE",
+      "createdAt": "2026-09-17T18:23:35.301Z",
+      "updatedAt": "2026-09-17T18:23:35.301Z",
       "__v": 0
     }
   ],
@@ -662,245 +874,33 @@
       "__v": 0
     }
   ],
-  "roles": [
+  "leads": [
     {
-      "_id": "6aaade790b2b8fe53235df52",
-      "name": "ADMIN",
-      "permissions": [
-        "student.create",
-        "student.read",
-        "student.update",
-        "student.delete",
-        "teacher.create",
-        "teacher.read",
-        "teacher.update",
-        "teacher.delete",
-        "course.create",
-        "course.read",
-        "course.update",
-        "course.delete",
-        "batch.create",
-        "batch.read",
-        "batch.update",
-        "batch.delete",
-        "attendance.create",
-        "attendance.read",
-        "attendance.update",
-        "fees.create",
-        "fees.read",
-        "fees.update",
-        "payment.read",
-        "payment.create",
-        "payment.refund",
-        "exam.create",
-        "exam.read",
-        "exam.update",
-        "exam.publish",
-        "question.create",
-        "question.read",
-        "competition.create",
-        "competition.read",
-        "competition.update",
-        "announcement.create",
-        "announcement.read",
-        "notification.send",
-        "payroll.generate",
-        "payroll.read",
-        "payroll.pay",
-        "report.read",
-        "audit.read"
-      ],
-      "isSystemRole": true,
-      "createdAt": "2026-09-16T18:22:49.803Z",
-      "updatedAt": "2026-09-16T18:22:49.803Z",
-      "__v": 0
-    },
-    {
-      "_id": "6aaade790b2b8fe53235df53",
-      "name": "TEACHER",
-      "permissions": [
-        "student.read",
-        "course.read",
-        "batch.read",
-        "attendance.create",
-        "attendance.read",
-        "exam.create",
-        "exam.read",
-        "exam.update",
-        "question.create",
-        "question.read",
-        "announcement.read"
-      ],
-      "isSystemRole": true,
-      "createdAt": "2026-09-16T18:22:49.827Z",
-      "updatedAt": "2026-09-16T18:22:49.827Z",
-      "__v": 0
-    },
-    {
-      "_id": "6aaade790b2b8fe53235df54",
-      "name": "STUDENT",
-      "permissions": [
-        "course.read",
-        "batch.read",
-        "announcement.read"
-      ],
-      "isSystemRole": true,
-      "createdAt": "2026-09-16T18:22:49.838Z",
-      "updatedAt": "2026-09-16T18:22:49.838Z",
-      "__v": 0
-    }
-  ],
-  "students": [
-    {
-      "_id": "6aaae6bba96d45c2a25d0508",
-      "userId": "6aaae6bba96d45c2a25d0506",
-      "studentType": "ONLINE_GUEST",
-      "isEnrolled": false,
-      "leadId": "6aaae6bba96d45c2a25d0507",
-      "personal": {
-        "firstName": "TestStudent",
-        "lastName": "Kumar",
-        "dob": null,
-        "gender": "OTHER"
-      },
-      "contact": {
-        "phone": "985619148",
-        "email": "teststudent1789585083154@gmail.com",
-        "address": {
-          "line1": "",
-          "city": "",
-          "state": "",
-          "pincode": ""
-        }
-      },
-      "guardian": {
-        "name": "",
-        "phone": "",
-        "relation": "FATHER"
-      },
-      "academic": {
-        "schoolName": "",
-        "class": "",
-        "board": ""
-      },
-      "status": "ACTIVE",
-      "createdAt": "2026-09-16T18:58:03.517Z",
-      "updatedAt": "2026-09-16T18:58:03.517Z",
-      "__v": 0
-    },
-    {
-      "_id": "6aac30274fed6248b981b53b",
-      "userId": "6aac30274fed6248b981b539",
-      "studentType": "ONLINE_GUEST",
-      "isEnrolled": false,
-      "leadId": "6aac30274fed6248b981b53a",
-      "personal": {
-        "firstName": "Test",
-        "lastName": "Student",
-        "dob": null,
-        "gender": "OTHER"
-      },
-      "contact": {
-        "phone": "7478996522",
-        "email": "shubh123@gmail.com",
-        "address": {
-          "line1": "",
-          "city": "",
-          "state": "",
-          "pincode": ""
-        }
-      },
-      "guardian": {
-        "name": "",
-        "phone": "",
-        "relation": "FATHER"
-      },
-      "academic": {
-        "schoolName": "",
-        "class": "",
-        "board": ""
-      },
-      "status": "ACTIVE",
-      "createdAt": "2026-09-17T18:23:35.301Z",
-      "updatedAt": "2026-09-17T18:23:35.301Z",
-      "__v": 0
-    }
-  ],
-  "users": [
-    {
-      "_id": "6aaade7a0b2b8fe53235df55",
-      "name": "System Administrator",
-      "email": "admin@vedaclasses.com",
-      "phone": "9999999999",
-      "passwordHash": "$2b$12$IB.KauDUbOIZ9TVpbytX3eYBuU5rw2w8jBEcd6ldSf8KENXpZBiNq",
-      "authProvider": "LOCAL",
-      "googleId": null,
-      "studentType": null,
-      "roleIds": [
-        "6aaade790b2b8fe53235df52"
-      ],
-      "status": "ACTIVE",
-      "profileImage": null,
-      "lastLoginAt": "2026-09-24T18:20:48.305Z",
-      "createdAt": "2026-09-16T18:22:50.392Z",
-      "updatedAt": "2026-09-24T18:20:48.306Z",
-      "__v": 0
-    },
-    {
-      "_id": "6aaae6ab2f61138c5ac98e3e",
-      "name": "TestStudent Kumar",
-      "email": "teststudent1789585067079@gmail.com",
-      "phone": "989044060",
-      "passwordHash": "$2b$12$iQdpzdjhD4nDGOU0dYu5N.gGNn0b/783ykAVPyHQPTEGvQha.fU3q",
-      "authProvider": "LOCAL",
-      "googleId": null,
-      "studentType": "ONLINE_GUEST",
-      "roleIds": [
-        "6aaade790b2b8fe53235df54"
-      ],
-      "status": "ACTIVE",
-      "profileImage": null,
-      "lastLoginAt": "2026-09-16T18:57:48.115Z",
-      "createdAt": "2026-09-16T18:57:47.512Z",
-      "updatedAt": "2026-09-16T18:57:48.116Z",
-      "__v": 0
-    },
-    {
-      "_id": "6aaae6bba96d45c2a25d0506",
+      "_id": "6aaae6bba96d45c2a25d0507",
       "name": "TestStudent Kumar",
       "email": "teststudent1789585083154@gmail.com",
       "phone": "985619148",
-      "passwordHash": "$2b$12$4bt3bUloJUEZ.IqqlyiKq.hLYZWpJ14XXuBxw6ARbWgDAzlvixj0a",
-      "authProvider": "LOCAL",
-      "googleId": null,
-      "studentType": "ONLINE_GUEST",
-      "roleIds": [
-        "6aaade790b2b8fe53235df54"
-      ],
-      "status": "ACTIVE",
-      "profileImage": null,
-      "lastLoginAt": "2026-09-16T18:58:04.144Z",
-      "createdAt": "2026-09-16T18:58:03.508Z",
-      "updatedAt": "2026-09-16T18:58:04.144Z",
+      "source": "SELF_REGISTER",
+      "studentId": null,
+      "status": "NEW",
+      "convertedToAdmission": false,
+      "notes": "",
+      "createdAt": "2026-09-16T18:58:03.513Z",
+      "updatedAt": "2026-09-16T18:58:03.513Z",
       "__v": 0
     },
     {
-      "_id": "6aac30274fed6248b981b539",
+      "_id": "6aac30274fed6248b981b53a",
       "name": "Test Student",
       "email": "shubh123@gmail.com",
       "phone": "7478996522",
-      "passwordHash": "$2b$12$hg4OKZOgH9rOxvVy5/HT.eEhIhmEqaNJMB9PAaSVv9Rg09mK.opz2",
-      "authProvider": "LOCAL",
-      "googleId": null,
-      "studentType": "ONLINE_GUEST",
-      "roleIds": [
-        "6aaade790b2b8fe53235df54"
-      ],
-      "status": "ACTIVE",
-      "profileImage": null,
-      "lastLoginAt": "2026-09-17T18:23:35.294Z",
-      "createdAt": "2026-09-17T18:23:35.295Z",
-      "updatedAt": "2026-09-17T18:23:35.295Z",
+      "source": "SELF_REGISTER",
+      "studentId": null,
+      "status": "NEW",
+      "convertedToAdmission": false,
+      "notes": "",
+      "createdAt": "2026-09-17T18:23:35.297Z",
+      "updatedAt": "2026-09-17T18:23:35.297Z",
       "__v": 0
     }
   ]
