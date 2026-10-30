@@ -8,6 +8,7 @@ import feeRoutes from '../modules/fees/routes.js';
 import mcqRoutes from '../modules/mcq/routes.js';
 import uploadRoutes from '../modules/upload/routes.js';
 import galleryRoutes from '../modules/gallery/routes.js';
+import leadRoutes from '../modules/leads/routes.js';
 
 const router = Router();
 
@@ -30,6 +31,7 @@ router.use('/fees', feeRoutes);
 router.use('/mcq', mcqRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/gallery', galleryRoutes);
+router.use('/leads', leadRoutes);
 
 // router.use('/users', userRoutes);
 // router.use('/teachers', teacherRoutes);

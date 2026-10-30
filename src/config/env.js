@@ -5,7 +5,8 @@ dotenv.config();
 export const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: parseInt(process.env.PORT || '5000', 10),
-  MONGO_URI: process.env.MONGO_URI || 'mongodb://localhost:27017/coaching_management',
+  DATABASE_URL: process.env.DATABASE_URL || '',
+  DIRECT_URL: process.env.DIRECT_URL || '',
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || 'default_jwt_access_secret_change_in_production',
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'default_jwt_refresh_secret_change_in_production',
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',

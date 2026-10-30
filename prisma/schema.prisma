@@ -1,0 +1,438 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+  OTP
+}
+
+enum StudentType {
+  REGULAR
+  ONLINE_GUEST
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum OtpPurpose {
+  GUEST_SIGNUP
+  LOGIN
+  PASSWORD_RESET
+}
+
+enum LeadSource {
+  FREE_MCQ_TEST
+  GOOGLE_SIGNUP
+  OTP_SIGNUP
+  WEBSITE
+  ADMIN_MANUAL
+  SELF_REGISTER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  INTERESTED
+  CONVERTED
+  CLOSED
+}
+
+enum CourseStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum BatchStatus {
+  ACTIVE
+  UPCOMING
+  COMPLETED
+  CANCELLED
+}
+
+enum FeeStructureStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID_FULL
+  OVERDUE
+}
+
+enum InstallmentStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+}
+
+enum PaymentMode {
+  CASH
+  UPI_DIRECT
+  BANK_TRANSFER
+  CHEQUE
+  CARD_POS
+}
+
+enum McqSubject {
+  Physics
+  Chemistry
+  Mathematics
+  Biology
+  General
+}
+
+enum McqAccessType {
+  FREE
+  PAID
+}
+
+enum McqDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum McqStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum McqAttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  EXPIRED
+}
+
+model Role {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  permissions  String[]
+  isSystemRole Boolean  @default(false)
+  users        User[]   @relation("UserRoles")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model User {
+  id               String        @id @default(cuid())
+  name             String
+  email            String        @unique
+  phone            String?       @unique
+  passwordHash     String?
+  authProvider     AuthProvider  @default(LOCAL)
+  googleId         String?       @unique
+  studentType      StudentType?
+  status           UserStatus    @default(ACTIVE)
+  profileImage     String?
+  lastLoginAt      DateTime?
+  roles            Role[]        @relation("UserRoles")
+  sessions         Session[]
+  student          Student?
+  batches          Batch[]       @relation("BatchTeachers")
+  createdSets      McqSet[]      @relation("SetCreator")
+  createdQuestions McqQuestion[] @relation("QuestionCreator")
+  receivedPayments FeePayment[]  @relation("PaymentReceiver")
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([email])
+  @@index([phone])
+  @@index([status])
+  @@index([studentType])
+  @@map("users")
+}
+
+model Session {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String   @unique
+  deviceType       String?  @default("WEB")
+  browser          String?  @default("Unknown")
+  os               String?  @default("Unknown")
+  ipAddress        String?  @default("Unknown")
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Otp {
+  id        String     @id @default(cuid())
+  email     String
+  otpHash   String
+  purpose   OtpPurpose @default(GUEST_SIGNUP)
+  expiresAt DateTime
+  createdAt DateTime   @default(now())
+
+  @@index([email])
+  @@index([email, purpose])
+  @@map("otps")
+}
+
+model Lead {
+  id                   String     @id @default(cuid())
+  name                 String
+  email                String
+  phone                String?
+  source               LeadSource @default(WEBSITE)
+  studentId            String?
+  status               LeadStatus @default(NEW)
+  convertedToAdmission Boolean    @default(false)
+  notes                String?    @default("")
+  student              Student?   @relation("StudentLead")
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  @@index([email])
+  @@index([phone])
+  @@index([source])
+  @@index([status])
+  @@map("leads")
+}
+
+model Student {
+  id            String                @id @default(cuid())
+  userId        String                @unique
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentType   StudentType           @default(REGULAR)
+  isEnrolled    Boolean               @default(true)
+  studentCode   String?               @unique
+  leadId        String?               @unique
+  lead          Lead?                 @relation("StudentLead", fields: [leadId], references: [id], onDelete: SetNull)
+  personal      Json                  @default("{}")
+  contact       Json                  @default("{}")
+  guardian      Json                  @default("{}")
+  academic      Json                  @default("{}")
+  status        UserStatus            @default(ACTIVE)
+  feeStructures StudentFeeStructure[]
+  installments  FeeInstallment[]
+  payments      FeePayment[]
+  mcqAttempts   McqAttempt[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@index([studentType])
+  @@index([isEnrolled])
+  @@index([studentCode])
+  @@index([status])
+  @@map("students")
+}
+
+model Course {
+  id            String                @id @default(cuid())
+  name          String
+  code          String                @unique
+  description   String?               @default("")
+  duration      Json?                 @default("{}")
+  subjects      Json?                 @default("[]")
+  fee           Float                 @default(0)
+  status        CourseStatus          @default(ACTIVE)
+  batches       Batch[]
+  feeStructures StudentFeeStructure[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@index([code])
+  @@index([status])
+  @@map("courses")
+}
+
+model Batch {
+  id            String                @id @default(cuid())
+  courseId      String
+  course        Course                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  name          String
+  batchCode     String                @unique
+  teachers      User[]                @relation("BatchTeachers")
+  schedule      Json?                 @default("[]")
+  capacity      Int                   @default(50)
+  status        BatchStatus           @default(ACTIVE)
+  feeStructures StudentFeeStructure[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@index([courseId])
+  @@index([batchCode])
+  @@index([status])
+  @@map("batches")
+}
+
+model StudentFeeStructure {
+  id                String             @id @default(cuid())
+  studentId         String
+  student           Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId          String?
+  course            Course?            @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  batchId           String?
+  batch             Batch?             @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  grossAmount       Float
+  discount          Json?              @default("{}")
+  netPayable        Float
+  totalPaid         Float              @default(0)
+  totalPending      Float
+  status            FeeStructureStatus @default(UNPAID)
+  installmentsCount Int                @default(1)
+  installments      FeeInstallment[]
+  payments          FeePayment[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([studentId])
+  @@index([courseId])
+  @@index([batchId])
+  @@index([status])
+  @@map("student_fee_structures")
+}
+
+model FeeInstallment {
+  id                    String              @id @default(cuid())
+  studentFeeStructureId String
+  studentFeeStructure   StudentFeeStructure @relation(fields: [studentFeeStructureId], references: [id], onDelete: Cascade)
+  studentId             String
+  student               Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  installmentNumber     Int
+  title                 String
+  amount                Float
+  paidAmount            Float               @default(0)
+  pendingAmount         Float
+  dueDate               DateTime
+  status                InstallmentStatus   @default(PENDING)
+  paidAt                DateTime?
+  payments              FeePayment[]
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([studentFeeStructureId])
+  @@index([studentId])
+  @@index([dueDate])
+  @@index([status])
+  @@map("fee_installments")
+}
+
+model FeePayment {
+  id                    String              @id @default(cuid())
+  receiptNumber         String              @unique
+  studentId             String
+  student               Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentFeeStructureId String
+  studentFeeStructure   StudentFeeStructure @relation(fields: [studentFeeStructureId], references: [id], onDelete: Cascade)
+  installmentId         String?
+  installment           FeeInstallment?     @relation(fields: [installmentId], references: [id], onDelete: SetNull)
+  amountPaid            Float
+  paymentMode           PaymentMode
+  transactionRefNo      String?             @default("")
+  paymentDate           DateTime            @default(now())
+  receivedBy            String?
+  receiver              User?               @relation("PaymentReceiver", fields: [receivedBy], references: [id], onDelete: SetNull)
+  remarks               String?             @default("")
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([receiptNumber])
+  @@index([studentId])
+  @@index([studentFeeStructureId])
+  @@index([installmentId])
+  @@map("fee_payments")
+}
+
+model McqSet {
+  id                  String        @id @default(cuid())
+  title               String
+  subject             McqSubject    @default(General)
+  topicName           String?       @default("")
+  accessType          McqAccessType @default(FREE)
+  price               Float         @default(0)
+  difficulty          McqDifficulty @default(MEDIUM)
+  marksPerQuestion    Float         @default(4)
+  negativeMarks       Float         @default(1)
+  durationMinutes     Int           @default(30)
+  passingMarks        Float         @default(0)
+  status              McqStatus     @default(PUBLISHED)
+  totalQuestionsCount Int           @default(0)
+  createdBy           String?
+  creator             User?         @relation("SetCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  questions           McqQuestion[]
+  attempts            McqAttempt[]
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  @@index([subject])
+  @@index([accessType])
+  @@index([difficulty])
+  @@index([status])
+  @@map("mcq_sets")
+}
+
+model McqQuestion {
+  id               String   @id @default(cuid())
+  setId            String
+  set              McqSet   @relation(fields: [setId], references: [id], onDelete: Cascade)
+  questionNumber   Int      @default(1)
+  question         String
+  imageUrl         String?  @default("")
+  options          Json
+  correctOption    String
+  explanation      String?  @default("")
+  explanationImage String?  @default("")
+  createdBy        String?
+  creator          User?    @relation("QuestionCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([setId])
+  @@map("mcq_questions")
+}
+
+model McqAttempt {
+  id             String           @id @default(cuid())
+  setId          String
+  set            McqSet           @relation(fields: [setId], references: [id], onDelete: Cascade)
+  studentId      String
+  student        Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  startedAt      DateTime         @default(now())
+  submittedAt    DateTime         @default(now())
+  status         McqAttemptStatus @default(SUBMITTED)
+  score          Float            @default(0)
+  totalMarks     Float            @default(0)
+  correctAnswers Int              @default(0)
+  wrongAnswers   Int              @default(0)
+  unanswered     Int              @default(0)
+  answers        Json             @default("[]")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([setId])
+  @@index([studentId])
+  @@index([status])
+  @@map("mcq_attempts")
+}
+
+model GalleryItem {
+  id        String   @id @default(cuid())
+  title     String   @default("Veda Classes Campus")
+  category  String   @default("Campus")
+  image     String
+  public_id String   @default("")
+  tall      Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("gallery_items")
+}

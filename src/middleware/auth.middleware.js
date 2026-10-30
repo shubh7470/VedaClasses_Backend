@@ -1,6 +1,6 @@
 import { verifyAccessToken } from '../common/utils/jwt.js';
 import { AppError } from '../common/errors/AppError.js';
-import { User } from '../modules/users/model.js';
+import { prisma } from '../config/database.js';
 
 export const authenticate = async (req, res, next) => {
   try {
@@ -35,7 +35,11 @@ export const authenticate = async (req, res, next) => {
       );
     }
 
-    const user = await User.findById(decoded.userId).populate('roleIds');
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      include: { roles: true },
+    });
+
     if (!user) {
       return next(new AppError('User belonging to this token no longer exists.', 401, 'USER_NOT_FOUND'));
     }
@@ -47,13 +51,14 @@ export const authenticate = async (req, res, next) => {
     }
 
     // Aggregate roles and permissions
-    const roles = user.roleIds.map((r) => r.name);
+    const roles = user.roles.map((r) => r.name);
     const permissions = Array.from(
-      new Set(user.roleIds.flatMap((r) => r.permissions || []))
+      new Set(user.roles.flatMap((r) => r.permissions || []))
     );
 
     req.user = {
-      id: user._id.toString(),
+      id: user.id,
+      _id: user.id,
       name: user.name,
       email: user.email,
       roles,

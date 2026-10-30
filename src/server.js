@@ -1,13 +1,13 @@
 import app from './app.js';
 import { env } from './config/env.js';
-import { connectDatabase } from './config/database.js';
+import { connectDatabase, disconnectDatabase } from './config/database.js';
 import { seedDatabase } from './config/seed.js';
 
 let server;
 
 const startServer = async () => {
   try {
-    // 1. Connect to MongoDB
+    // 1. Connect to PostgreSQL (Supabase) via Prisma
     await connectDatabase();
 
     // 2. Seed default roles and admin account
@@ -29,10 +29,12 @@ const shutdown = async (signal) => {
   console.log(`\n🛑 ${signal} received. Closing server gracefully...`);
   if (server) {
     server.close(async () => {
-      console.log('🔒 HTTP server closed.');
+      await disconnectDatabase();
+      console.log('🔒 HTTP server closed and database disconnected.');
       process.exit(0);
     });
   } else {
+    await disconnectDatabase();
     process.exit(0);
   }
 };

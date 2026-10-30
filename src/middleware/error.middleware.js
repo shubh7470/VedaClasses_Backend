@@ -6,34 +6,32 @@ export const errorHandler = (err, req, res, next) => {
   let code = err.code || 'INTERNAL_ERROR';
   let errors = err.errors || [];
 
-  // Mongoose CastError (invalid ObjectId)
-  if (err.name === 'CastError') {
-    statusCode = 400;
-    message = `Invalid format for resource identifier: ${err.path}`;
-    code = 'INVALID_ID';
-  }
-
-  // Mongoose duplicate key error (code 11000)
-  if (err.code === 11000) {
+  // Prisma unique constraint violation (P2002)
+  if (err.code === 'P2002') {
     statusCode = 409;
-    const field = Object.keys(err.keyValue || {})[0];
-    message = field ? `${field} already exists` : 'Duplicate key violation';
+    const target = err.meta?.target;
+    const field = Array.isArray(target) ? target.join(', ') : target || 'field';
+    message = `A record with this ${field} already exists.`;
     code = 'DUPLICATE_ENTRY';
     errors = [{ field, message }];
   }
 
-  // Mongoose ValidationError
-  if (err.name === 'ValidationError') {
-    statusCode = 400;
-    message = 'Validation Error';
-    code = 'VALIDATION_ERROR';
-    errors = Object.values(err.errors).map((e) => ({
-      field: e.path,
-      message: e.message,
-    }));
+  // Prisma record not found (P2025)
+  if (err.code === 'P2025') {
+    statusCode = 404;
+    message = err.meta?.cause || 'Requested record was not found.';
+    code = 'NOT_FOUND';
   }
 
-  // Send standard JSON error response (Section 21 format)
+  // Prisma foreign key constraint failed (P2003)
+  if (err.code === 'P2003') {
+    statusCode = 400;
+    const field = err.meta?.field_name || 'relation';
+    message = `Related record not found for: ${field}`;
+    code = 'FOREIGN_KEY_VIOLATION';
+  }
+
+  // Send standard JSON error response
   return res.status(statusCode).json({
     success: false,
     message,

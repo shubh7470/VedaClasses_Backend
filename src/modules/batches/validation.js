@@ -4,10 +4,10 @@ const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'
 
 export const createBatchSchema = {
   body: z.object({
-    courseId: z.string({ required_error: 'Course ID is required' }).regex(/^[0-9a-fA-F]{24}$/, 'Invalid course ID format'),
+    courseId: z.string({ required_error: 'Course ID is required' }).min(1, 'Course ID cannot be empty'),
     name: z.string({ required_error: 'Batch name is required' }).min(1),
     batchCode: z.string({ required_error: 'Batch code is required' }).min(2).max(25),
-    teachers: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid teacher ID')).optional().default([]),
+    teachers: z.array(z.string().min(1)).optional().default([]),
     schedule: z
       .array(
         z.object({
@@ -25,10 +25,10 @@ export const createBatchSchema = {
 
 export const updateBatchSchema = {
   body: z.object({
-    courseId: z.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
+    courseId: z.string().min(1).optional(),
     name: z.string().min(1).optional(),
     batchCode: z.string().min(2).max(25).optional(),
-    teachers: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/)).optional(),
+    teachers: z.array(z.string().min(1)).optional(),
     schedule: z
       .array(
         z.object({
@@ -47,8 +47,8 @@ export const listBatchesSchema = {
   query: z.object({
     page: z.string().regex(/^\d+$/).transform(Number).optional().default('1'),
     limit: z.string().regex(/^\d+$/).transform(Number).optional().default('20'),
-    courseId: z.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
-    teacherId: z.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
+    courseId: z.string().min(1).optional(),
+    teacherId: z.string().min(1).optional(),
     search: z.string().optional(),
     status: z.enum(['ACTIVE', 'UPCOMING', 'COMPLETED', 'CANCELLED']).optional(),
   }),

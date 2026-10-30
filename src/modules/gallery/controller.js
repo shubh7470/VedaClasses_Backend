@@ -1,4 +1,4 @@
-import { GalleryItem } from './model.js';
+import { prisma } from '../../config/database.js';
 import { v2 as cloudinary } from 'cloudinary';
 
 const initCloudinary = () => {
@@ -16,8 +16,11 @@ const initCloudinary = () => {
 export const listGalleryItems = async (req, res) => {
   try {
     const { category } = req.query;
-    const filter = category && category !== 'All' ? { category } : {};
-    const items = await GalleryItem.find(filter).sort({ createdAt: -1 });
+    const where = category && category !== 'All' ? { category } : {};
+    const items = await prisma.galleryItem.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
 
     return res.status(200).json({
       success: true,
@@ -44,13 +47,15 @@ export const createGalleryItem = async (req, res) => {
       });
     }
 
-    const item = await GalleryItem.create({
-      title: title || 'Campus Photo',
-      category: category || 'Campus',
-      image,
-      public_id: public_id || '',
-      tall: Boolean(tall),
-      order: Number(order) || 0,
+    const item = await prisma.galleryItem.create({
+      data: {
+        title: title || 'Campus Photo',
+        category: category || 'Campus',
+        image,
+        public_id: public_id || '',
+        tall: Boolean(tall),
+        order: Number(order) || 0,
+      },
     });
 
     return res.status(201).json({
@@ -70,7 +75,7 @@ export const createGalleryItem = async (req, res) => {
 export const deleteGalleryItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const item = await GalleryItem.findById(id);
+    const item = await prisma.galleryItem.findUnique({ where: { id } });
 
     if (!item) {
       return res.status(404).json({
@@ -88,7 +93,7 @@ export const deleteGalleryItem = async (req, res) => {
       }
     }
 
-    await GalleryItem.findByIdAndDelete(id);
+    await prisma.galleryItem.delete({ where: { id } });
 
     return res.status(200).json({
       success: true,
@@ -108,13 +113,25 @@ export const updateGalleryItem = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
 
-    const item = await GalleryItem.findByIdAndUpdate(id, updates, { new: true });
-    if (!item) {
+    const existing = await prisma.galleryItem.findUnique({ where: { id } });
+    if (!existing) {
       return res.status(404).json({
         success: false,
         message: 'Gallery item not found',
       });
     }
+
+    const item = await prisma.galleryItem.update({
+      where: { id },
+      data: {
+        ...(updates.title !== undefined && { title: updates.title }),
+        ...(updates.category !== undefined && { category: updates.category }),
+        ...(updates.image !== undefined && { image: updates.image }),
+        ...(updates.public_id !== undefined && { public_id: updates.public_id }),
+        ...(updates.tall !== undefined && { tall: Boolean(updates.tall) }),
+        ...(updates.order !== undefined && { order: Number(updates.order) }),
+      },
+    });
 
     return res.status(200).json({
       success: true,

@@ -1,7 +1,4 @@
-import { Student } from './model.js';
-import { User } from '../users/model.js';
-import { Role } from '../roles/model.js';
-import { Lead } from '../leads/model.js';
+import { prisma } from '../../config/database.js';
 import { AppError } from '../../common/errors/AppError.js';
 import { ROLES } from '../../common/constants/roles.js';
 import { hashPassword } from '../../common/utils/password.js';
@@ -13,11 +10,19 @@ const generateStudentCode = async () => {
   const year = new Date().getFullYear();
   const prefix = `STD-${year}-`;
 
-  const lastStudent = await Student.findOne({
-    studentCode: new RegExp(`^${prefix}`),
-  })
-    .sort({ studentCode: -1 })
-    .select('studentCode');
+  const lastStudent = await prisma.student.findFirst({
+    where: {
+      studentCode: {
+        startsWith: prefix,
+      },
+    },
+    orderBy: {
+      studentCode: 'desc',
+    },
+    select: {
+      studentCode: true,
+    },
+  });
 
   let nextSequence = 1;
   if (lastStudent && lastStudent.studentCode) {
@@ -40,19 +45,19 @@ export const studentService = {
     const cleanPhone = contact.phone ? contact.phone.trim() : null;
 
     // Check unique email
-    const existingUser = await User.findOne({ email: cleanEmail });
+    const existingUser = await prisma.user.findUnique({ where: { email: cleanEmail } });
     if (existingUser) {
       throw new AppError('User with this email already exists.', 409, 'EMAIL_EXISTS');
     }
 
     if (cleanPhone) {
-      const existingPhone = await User.findOne({ phone: cleanPhone });
+      const existingPhone = await prisma.user.findUnique({ where: { phone: cleanPhone } });
       if (existingPhone) {
         throw new AppError('User with this phone already exists.', 409, 'PHONE_EXISTS');
       }
     }
 
-    const studentRole = await Role.findOne({ name: ROLES.STUDENT });
+    const studentRole = await prisma.role.findUnique({ where: { name: ROLES.STUDENT } });
     if (!studentRole) {
       throw new AppError('System role STUDENT is not configured.', 500, 'ROLE_MISSING');
     }
@@ -64,32 +69,43 @@ export const studentService = {
 
     const fullName = `${personal.firstName} ${personal.lastName || ''}`.trim();
 
-    // 1. Create User account
-    const user = await User.create({
-      name: fullName,
-      email: cleanEmail,
-      phone: cleanPhone,
-      passwordHash,
-      roleIds: [studentRole._id],
-      studentType: 'REGULAR',
-      status: 'ACTIVE',
-    });
+    const { user, student } = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          name: fullName,
+          email: cleanEmail,
+          phone: cleanPhone,
+          passwordHash,
+          studentType: 'REGULAR',
+          status: 'ACTIVE',
+          roles: {
+            connect: [{ id: studentRole.id }],
+          },
+        },
+      });
 
-    // 2. Create Student record
-    const student = await Student.create({
-      userId: user._id,
-      studentType: 'REGULAR',
-      isEnrolled: true,
-      studentCode,
-      personal,
-      contact: {
-        ...contact,
-        email: cleanEmail,
-        phone: cleanPhone,
-      },
-      guardian: guardian || {},
-      academic: academic || {},
-      status: 'ACTIVE',
+      const newStudent = await tx.student.create({
+        data: {
+          userId: newUser.id,
+          studentType: 'REGULAR',
+          isEnrolled: true,
+          studentCode,
+          personal,
+          contact: {
+            ...contact,
+            email: cleanEmail,
+            phone: cleanPhone,
+          },
+          guardian: guardian || {},
+          academic: academic || {},
+          status: 'ACTIVE',
+        },
+        include: {
+          user: true,
+        },
+      });
+
+      return { user: newUser, student: newStudent };
     });
 
     return {
@@ -109,38 +125,57 @@ export const studentService = {
     const limit = Math.min(100, Math.max(1, parseInt(queryParams.limit || '20', 10)));
     const skip = (page - 1) * limit;
 
-    const filter = {};
+    const where = {};
 
     if (queryParams.status) {
-      filter.status = queryParams.status;
+      where.status = queryParams.status;
     }
 
     if (queryParams.studentType) {
-      filter.studentType = queryParams.studentType;
+      where.studentType = queryParams.studentType;
     }
 
     if (queryParams.search) {
-      const searchRegex = new RegExp(queryParams.search.trim(), 'i');
-      filter.$or = [
-        { 'personal.firstName': searchRegex },
-        { 'personal.lastName': searchRegex },
-        { 'contact.email': searchRegex },
-        { 'contact.phone': searchRegex },
-        { studentCode: searchRegex },
+      const search = queryParams.search.trim();
+      where.OR = [
+        { studentCode: { contains: search, mode: 'insensitive' } },
+        { user: { name: { contains: search, mode: 'insensitive' } } },
+        { user: { email: { contains: search, mode: 'insensitive' } } },
+        { user: { phone: { contains: search, mode: 'insensitive' } } },
       ];
     }
 
     const [students, total] = await Promise.all([
-      Student.find(filter)
-        .populate('userId', 'name email phone status profileImage lastLoginAt')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
-      Student.countDocuments(filter),
+      prisma.student.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              status: true,
+              profileImage: true,
+              lastLoginAt: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.student.count({ where }),
     ]);
 
+    // Format output with userId populated as expected by frontend
+    const formattedStudents = students.map((s) => ({
+      ...s,
+      userId: s.user ? { ...s.user, _id: s.user.id } : null,
+    }));
+
     return {
-      data: students,
+      data: formattedStudents,
       pagination: {
         page,
         limit,
@@ -154,49 +189,68 @@ export const studentService = {
    * Get single student by ID
    */
   getStudentById: async (id) => {
-    const student = await Student.findById(id)
-      .populate('userId', 'name email phone status profileImage lastLoginAt authProvider studentType')
-      .populate('leadId', 'source status convertedToAdmission createdAt');
+    const student = await prisma.student.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            status: true,
+            profileImage: true,
+            lastLoginAt: true,
+            authProvider: true,
+            studentType: true,
+          },
+        },
+        lead: {
+          select: {
+            id: true,
+            source: true,
+            status: true,
+            convertedToAdmission: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
 
     if (!student) {
       throw new AppError('Student not found.', 404, 'STUDENT_NOT_FOUND');
     }
 
-    return student;
+    return {
+      ...student,
+      userId: student.user ? { ...student.user, _id: student.user.id } : null,
+      leadId: student.lead ? { ...student.lead, _id: student.lead.id } : null,
+    };
   },
 
   /**
    * Update student details
    */
   updateStudent: async (id, updateData) => {
-    const student = await Student.findById(id);
+    const student = await prisma.student.findUnique({ where: { id } });
     if (!student) {
       throw new AppError('Student not found.', 404, 'STUDENT_NOT_FOUND');
     }
 
-    // Update student fields
-    if (updateData.personal) {
-      student.personal = { ...student.personal.toObject(), ...updateData.personal };
-    }
-    if (updateData.contact) {
-      student.contact = { ...student.contact.toObject(), ...updateData.contact };
-    }
-    if (updateData.guardian) {
-      student.guardian = { ...student.guardian.toObject(), ...updateData.guardian };
-    }
-    if (updateData.academic) {
-      student.academic = { ...student.academic.toObject(), ...updateData.academic };
-    }
-    if (updateData.status) {
-      student.status = updateData.status;
-    }
+    const currentPersonal = (student.personal && typeof student.personal === 'object') ? student.personal : {};
+    const currentContact = (student.contact && typeof student.contact === 'object') ? student.contact : {};
+    const currentGuardian = (student.guardian && typeof student.guardian === 'object') ? student.guardian : {};
+    const currentAcademic = (student.academic && typeof student.academic === 'object') ? student.academic : {};
 
-    await student.save();
+    const updatedPersonal = updateData.personal ? { ...currentPersonal, ...updateData.personal } : currentPersonal;
+    const updatedContact = updateData.contact ? { ...currentContact, ...updateData.contact } : currentContact;
+    const updatedGuardian = updateData.guardian ? { ...currentGuardian, ...updateData.guardian } : currentGuardian;
+    const updatedAcademic = updateData.academic ? { ...currentAcademic, ...updateData.academic } : currentAcademic;
 
-    // Sync changes to User document
+    // Sync to user table
     const userUpdates = {};
     if (updateData.personal?.firstName || updateData.personal?.lastName) {
-      userUpdates.name = `${student.personal.firstName} ${student.personal.lastName || ''}`.trim();
+      userUpdates.name = `${updatedPersonal.firstName || ''} ${updatedPersonal.lastName || ''}`.trim();
     }
     if (updateData.contact?.phone) {
       userUpdates.phone = updateData.contact.phone;
@@ -205,18 +259,40 @@ export const studentService = {
       userUpdates.status = updateData.status;
     }
 
-    if (Object.keys(userUpdates).length > 0) {
-      await User.findByIdAndUpdate(student.userId, userUpdates);
-    }
+    const updatedStudent = await prisma.$transaction(async (tx) => {
+      if (Object.keys(userUpdates).length > 0) {
+        await tx.user.update({
+          where: { id: student.userId },
+          data: userUpdates,
+        });
+      }
 
-    return student;
+      return tx.student.update({
+        where: { id },
+        data: {
+          personal: updatedPersonal,
+          contact: updatedContact,
+          guardian: updatedGuardian,
+          academic: updatedAcademic,
+          ...(updateData.status && { status: updateData.status }),
+        },
+        include: {
+          user: true,
+        },
+      });
+    });
+
+    return {
+      ...updatedStudent,
+      userId: updatedStudent.user ? { ...updatedStudent.user, _id: updatedStudent.user.id } : null,
+    };
   },
 
   /**
    * Upgrade an ONLINE_GUEST student to a full REGULAR student
    */
   upgradeGuestToRegular: async (id, data = {}) => {
-    const student = await Student.findById(id);
+    const student = await prisma.student.findUnique({ where: { id } });
     if (!student) {
       throw new AppError('Student not found.', 404, 'STUDENT_NOT_FOUND');
     }
@@ -227,57 +303,83 @@ export const studentService = {
 
     const studentCode = data.studentCode || (await generateStudentCode());
 
-    student.studentType = 'REGULAR';
-    student.isEnrolled = true;
-    student.studentCode = studentCode;
+    const currentGuardian = (student.guardian && typeof student.guardian === 'object') ? student.guardian : {};
+    const currentAcademic = (student.academic && typeof student.academic === 'object') ? student.academic : {};
 
-    if (data.guardian) {
-      student.guardian = { ...student.guardian.toObject(), ...data.guardian };
-    }
-    if (data.academic) {
-      student.academic = { ...student.academic.toObject(), ...data.academic };
-    }
+    const updatedGuardian = data.guardian ? { ...currentGuardian, ...data.guardian } : currentGuardian;
+    const updatedAcademic = data.academic ? { ...currentAcademic, ...data.academic } : currentAcademic;
 
-    await student.save();
-
-    // Update user record
-    await User.findByIdAndUpdate(student.userId, { studentType: 'REGULAR' });
-
-    // Update associated lead record if present
-    if (student.leadId) {
-      await Lead.findByIdAndUpdate(student.leadId, {
-        status: 'CONVERTED',
-        convertedToAdmission: true,
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: student.userId },
+        data: { studentType: 'REGULAR' },
       });
-    }
 
-    return student;
+      if (student.leadId) {
+        await tx.lead.update({
+          where: { id: student.leadId },
+          data: {
+            status: 'CONVERTED',
+            convertedToAdmission: true,
+          },
+        }).catch(() => {});
+      }
+
+      return tx.student.update({
+        where: { id },
+        data: {
+          studentType: 'REGULAR',
+          isEnrolled: true,
+          studentCode,
+          guardian: updatedGuardian,
+          academic: updatedAcademic,
+        },
+      });
+    });
+
+    return updated;
   },
 
   /**
    * Student Self-Service: Get own profile details
    */
   getSelfProfile: async (userId) => {
-    const student = await Student.findOne({ userId })
-      .populate('userId', 'name email phone status profileImage lastLoginAt');
+    const student = await prisma.student.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            status: true,
+            profileImage: true,
+            lastLoginAt: true,
+          },
+        },
+      },
+    });
 
     if (!student) {
       throw new AppError('Student profile not found.', 404, 'PROFILE_NOT_FOUND');
     }
 
-    return student;
+    return {
+      ...student,
+      userId: student.user ? { ...student.user, _id: student.user.id } : null,
+    };
   },
 
   /**
    * Student Self-Service: Get fees (ENROLLED REGULAR STUDENTS ONLY)
    */
   getSelfFees: async (userId) => {
-    const student = await Student.findOne({ userId });
+    const student = await prisma.student.findUnique({ where: { userId } });
     if (!student) {
       throw new AppError('Student profile not found.', 404, 'PROFILE_NOT_FOUND');
     }
 
-    // Strict Access Rule for Guest vs Regular Students
     if (!student.isEnrolled || student.studentType !== 'REGULAR') {
       throw new AppError(
         'Fee records are only available for enrolled coaching students.',
@@ -286,13 +388,22 @@ export const studentService = {
       );
     }
 
-    // Phase 2 will populate real invoices & payments from collections
+    const feeStructures = await prisma.studentFeeStructure.findMany({
+      where: { studentId: student.id },
+      include: {
+        installments: true,
+        payments: true,
+      },
+    });
+
+    const pendingAmount = feeStructures.reduce((sum, f) => sum + f.totalPending, 0);
+
     return {
-      studentId: student._id,
+      studentId: student.id,
       studentCode: student.studentCode,
-      invoices: [],
-      payments: [],
-      pendingAmount: 0,
+      invoices: feeStructures,
+      payments: feeStructures.flatMap((f) => f.payments),
+      pendingAmount,
     };
   },
 
@@ -300,7 +411,7 @@ export const studentService = {
    * Student Self-Service: Get attendance (ENROLLED REGULAR STUDENTS ONLY)
    */
   getSelfAttendance: async (userId) => {
-    const student = await Student.findOne({ userId });
+    const student = await prisma.student.findUnique({ where: { userId } });
     if (!student) {
       throw new AppError('Student profile not found.', 404, 'PROFILE_NOT_FOUND');
     }
@@ -314,7 +425,7 @@ export const studentService = {
     }
 
     return {
-      studentId: student._id,
+      studentId: student.id,
       studentCode: student.studentCode,
       records: [],
       attendancePercentage: 0,
@@ -325,16 +436,36 @@ export const studentService = {
    * Student Self-Service: Get tests (AVAILABLE TO BOTH REGULAR & GUEST STUDENTS)
    */
   getSelfTests: async (userId) => {
-    const student = await Student.findOne({ userId });
+    const student = await prisma.student.findUnique({ where: { userId } });
     if (!student) {
       throw new AppError('Student profile not found.', 404, 'PROFILE_NOT_FOUND');
     }
 
-    // Available to both regular coaching students and online mock test takers
+    const availableSets = await prisma.mcqSet.findMany({
+      where: { status: 'PUBLISHED' },
+      select: {
+        id: true,
+        title: true,
+        subject: true,
+        topicName: true,
+        accessType: true,
+        price: true,
+        difficulty: true,
+        durationMinutes: true,
+        totalQuestionsCount: true,
+      },
+    });
+
+    const recentAttempts = await prisma.mcqAttempt.findMany({
+      where: { studentId: student.id },
+      orderBy: { submittedAt: 'desc' },
+      take: 10,
+    });
+
     return {
       studentType: student.studentType,
-      availableTests: [],
-      recentAttempts: [],
+      availableTests: availableSets,
+      recentAttempts,
     };
   },
 };

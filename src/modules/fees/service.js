@@ -1,12 +1,20 @@
-import mongoose from 'mongoose';
-import { StudentFeeStructure, FeeInstallment, FeePayment } from './model.js';
-import { Student } from '../students/model.js';
+import { prisma } from '../../config/database.js';
 import { AppError } from '../../common/errors/AppError.js';
+
+const formatFeeStructure = (fee) => {
+  if (!fee) return null;
+  return {
+    ...fee,
+    studentId: fee.student ? { ...fee.student, _id: fee.student.id } : fee.studentId,
+    courseId: fee.course ? { ...fee.course, _id: fee.course.id } : fee.courseId,
+    batchId: fee.batch ? { ...fee.batch, _id: fee.batch.id } : fee.batchId,
+  };
+};
 
 export const createFeeStructure = async (data, userId) => {
   const { studentId, courseId, batchId, grossAmount, discount, installments } = data;
 
-  const student = await Student.findById(studentId);
+  const student = await prisma.student.findUnique({ where: { id: studentId } });
   if (!student) {
     throw new AppError('Student not found', 404, 'STUDENT_NOT_FOUND');
   }
@@ -27,90 +35,97 @@ export const createFeeStructure = async (data, userId) => {
     );
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    // Deactivate / handle previous fee structure if any
-    const existingFee = await StudentFeeStructure.findOne({ studentId }).session(session);
+  await prisma.$transaction(async (tx) => {
+    // Remove previous fee structure if any exists
+    const existingFee = await tx.studentFeeStructure.findFirst({ where: { studentId } });
     if (existingFee) {
-      await FeeInstallment.deleteMany({ studentFeeStructureId: existingFee._id }).session(session);
-      await StudentFeeStructure.findByIdAndDelete(existingFee._id).session(session);
+      await tx.feeInstallment.deleteMany({ where: { studentFeeStructureId: existingFee.id } });
+      await tx.studentFeeStructure.delete({ where: { id: existingFee.id } });
     }
 
-    const feeStructureArr = await StudentFeeStructure.create(
-      [
-        {
-          studentId,
-          courseId: courseId || student.courseId,
-          batchId: batchId || student.batchId,
-          grossAmount,
-          discount: {
-            amount: discountAmount,
-            reason: discount?.reason || '',
-            approvedBy: userId,
-          },
-          netPayable,
-          totalPaid: 0,
-          totalPending: netPayable,
-          status: 'UNPAID',
-          installmentsCount: installments.length,
+    const feeStructure = await tx.studentFeeStructure.create({
+      data: {
+        studentId,
+        courseId: courseId || null,
+        batchId: batchId || null,
+        grossAmount: Number(grossAmount),
+        discount: {
+          amount: discountAmount,
+          reason: discount?.reason || '',
+          approvedBy: userId || null,
         },
-      ],
-      { session }
-    );
+        netPayable: Number(netPayable),
+        totalPaid: 0,
+        totalPending: Number(netPayable),
+        status: 'UNPAID',
+        installmentsCount: installments.length,
+      },
+    });
 
-    const feeStructure = feeStructureArr[0];
-
-    const installmentDocs = installments.map((inst, index) => ({
-      studentFeeStructureId: feeStructure._id,
+    const installmentData = installments.map((inst, index) => ({
+      studentFeeStructureId: feeStructure.id,
       studentId,
       installmentNumber: inst.installmentNumber || index + 1,
       title: inst.title || `Installment ${index + 1}`,
-      amount: inst.amount,
+      amount: Number(inst.amount),
       paidAmount: 0,
-      pendingAmount: inst.amount,
+      pendingAmount: Number(inst.amount),
       dueDate: new Date(inst.dueDate),
       status: 'PENDING',
     }));
 
-    await FeeInstallment.insertMany(installmentDocs, { session });
+    await tx.feeInstallment.createMany({
+      data: installmentData,
+    });
+  });
 
-    await session.commitTransaction();
-    session.endSession();
-
-    return getStudentFeeDetails(studentId);
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
-  }
+  return getStudentFeeDetails(studentId);
 };
 
 export const getStudentFeeDetails = async (studentId) => {
-  const feeStructure = await StudentFeeStructure.findOne({ studentId })
-    .populate('studentId', 'personal contact studentCode studentType')
-    .populate('courseId', 'name code fee')
-    .populate('batchId', 'name');
+  const feeStructure = await prisma.studentFeeStructure.findFirst({
+    where: { studentId },
+    include: {
+      student: {
+        select: { id: true, personal: true, contact: true, studentCode: true, studentType: true },
+      },
+      course: {
+        select: { id: true, name: true, code: true, fee: true },
+      },
+      batch: {
+        select: { id: true, name: true },
+      },
+    },
+  });
 
   if (!feeStructure) {
     return null;
   }
 
-  const installments = await FeeInstallment.find({
-    studentFeeStructureId: feeStructure._id,
-  }).sort({ installmentNumber: 1 });
+  const installments = await prisma.feeInstallment.findMany({
+    where: { studentFeeStructureId: feeStructure.id },
+    orderBy: { installmentNumber: 'asc' },
+  });
 
-  const payments = await FeePayment.find({
-    studentFeeStructureId: feeStructure._id,
-  })
-    .populate('receivedBy', 'name email')
-    .sort({ paymentDate: -1 });
+  const payments = await prisma.feePayment.findMany({
+    where: { studentFeeStructureId: feeStructure.id },
+    include: {
+      receiver: {
+        select: { id: true, name: true, email: true },
+      },
+    },
+    orderBy: { paymentDate: 'desc' },
+  });
+
+  const formattedPayments = payments.map((p) => ({
+    ...p,
+    receivedBy: p.receiver ? { ...p.receiver, _id: p.receiver.id } : p.receivedBy,
+  }));
 
   return {
-    feeStructure,
-    installments,
-    payments,
+    feeStructure: formatFeeStructure(feeStructure),
+    installments: installments.map((inst) => ({ ...inst, _id: inst.id })),
+    payments: formattedPayments,
   };
 };
 
@@ -126,7 +141,10 @@ export const recordManualPayment = async (data, userId) => {
     remarks,
   } = data;
 
-  const feeStructure = await StudentFeeStructure.findById(studentFeeStructureId);
+  const feeStructure = await prisma.studentFeeStructure.findUnique({
+    where: { id: studentFeeStructureId },
+  });
+
   if (!feeStructure) {
     throw new AppError('Fee structure not found', 404, 'FEE_STRUCTURE_NOT_FOUND');
   }
@@ -143,52 +161,43 @@ export const recordManualPayment = async (data, userId) => {
     );
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
+  return await prisma.$transaction(async (tx) => {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const receiptNumber = `REC-${Date.now().toString().slice(-6)}-${randomSuffix}`;
 
-    const paymentDocs = await FeePayment.create(
-      [
-        {
-          receiptNumber,
-          studentId,
-          studentFeeStructureId,
-          installmentId: installmentId || null,
-          amountPaid,
-          paymentMode,
-          transactionRefNo,
-          paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
-          receivedBy: userId,
-          remarks,
-        },
-      ],
-      { session }
-    );
+    const payment = await tx.feePayment.create({
+      data: {
+        receiptNumber,
+        studentId,
+        studentFeeStructureId,
+        installmentId: installmentId || null,
+        amountPaid: Number(amountPaid),
+        paymentMode,
+        transactionRefNo: transactionRefNo || '',
+        paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+        receivedBy: userId || null,
+        remarks: remarks || '',
+      },
+    });
 
-    const payment = paymentDocs[0];
-
-    // Allocate payment amount across installments
-    let remainingPayment = amountPaid;
+    let remainingPayment = Number(amountPaid);
     let targetInstallments = [];
 
     if (installmentId) {
-      const specificInst = await FeeInstallment.findById(installmentId).session(session);
+      const specificInst = await tx.feeInstallment.findUnique({ where: { id: installmentId } });
       if (specificInst) targetInstallments.push(specificInst);
     }
 
-    // Also fetch all unpaid installments ordered by installmentNumber
-    const allPendingInsts = await FeeInstallment.find({
-      studentFeeStructureId,
-      status: { $ne: 'PAID' },
-    })
-      .sort({ installmentNumber: 1 })
-      .session(session);
+    const allPendingInsts = await tx.feeInstallment.findMany({
+      where: {
+        studentFeeStructureId,
+        status: { not: 'PAID' },
+      },
+      orderBy: { installmentNumber: 'asc' },
+    });
 
     for (const inst of allPendingInsts) {
-      if (installmentId && inst._id.toString() === installmentId.toString()) continue;
+      if (installmentId && inst.id === installmentId) continue;
       targetInstallments.push(inst);
     }
 
@@ -198,115 +207,125 @@ export const recordManualPayment = async (data, userId) => {
       const dueInInst = inst.pendingAmount;
       const payToInst = Math.min(remainingPayment, dueInInst);
 
-      inst.paidAmount += payToInst;
-      inst.pendingAmount -= payToInst;
+      const newPaid = inst.paidAmount + payToInst;
+      const newPending = inst.pendingAmount - payToInst;
       remainingPayment -= payToInst;
 
-      if (inst.pendingAmount === 0) {
-        inst.status = 'PAID';
-        inst.paidAt = new Date();
-      } else {
-        inst.status = 'PARTIALLY_PAID';
-      }
+      const isPaid = newPending === 0;
 
-      await inst.save({ session });
+      await tx.feeInstallment.update({
+        where: { id: inst.id },
+        data: {
+          paidAmount: newPaid,
+          pendingAmount: newPending,
+          status: isPaid ? 'PAID' : 'PARTIALLY_PAID',
+          paidAt: isPaid ? new Date() : inst.paidAt,
+        },
+      });
     }
 
-    // Update overall fee structure
-    feeStructure.totalPaid += amountPaid;
-    feeStructure.totalPending = Math.max(0, feeStructure.netPayable - feeStructure.totalPaid);
+    const newTotalPaid = feeStructure.totalPaid + Number(amountPaid);
+    const newTotalPending = Math.max(0, feeStructure.netPayable - newTotalPaid);
+    const newStatus = newTotalPending === 0 ? 'PAID_FULL' : 'PARTIALLY_PAID';
 
-    if (feeStructure.totalPending === 0) {
-      feeStructure.status = 'PAID_FULL';
-    } else {
-      feeStructure.status = 'PARTIALLY_PAID';
-    }
-
-    await feeStructure.save({ session });
-
-    await session.commitTransaction();
-    session.endSession();
+    const updatedFeeStructure = await tx.studentFeeStructure.update({
+      where: { id: feeStructure.id },
+      data: {
+        totalPaid: newTotalPaid,
+        totalPending: newTotalPending,
+        status: newStatus,
+      },
+    });
 
     return {
-      payment,
-      updatedFeeStructure: feeStructure,
+      payment: { ...payment, _id: payment.id },
+      updatedFeeStructure: { ...updatedFeeStructure, _id: updatedFeeStructure.id },
     };
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
-  }
+  });
 };
 
 export const getDashboardSummary = async () => {
-  const result = await StudentFeeStructure.aggregate([
-    {
-      $group: {
-        _id: null,
-        totalGross: { $sum: '$grossAmount' },
-        totalDiscount: { $sum: '$discount.amount' },
-        totalNetPayable: { $sum: '$netPayable' },
-        totalPaid: { $sum: '$totalPaid' },
-        totalPending: { $sum: '$totalPending' },
-      },
+  const aggregateResult = await prisma.studentFeeStructure.aggregate({
+    _sum: {
+      grossAmount: true,
+      netPayable: true,
+      totalPaid: true,
+      totalPending: true,
     },
-  ]);
-
-  const overdueCount = await FeeInstallment.countDocuments({
-    status: 'OVERDUE',
   });
 
-  const metrics = result[0] || {
-    totalGross: 0,
-    totalDiscount: 0,
-    totalNetPayable: 0,
-    totalPaid: 0,
-    totalPending: 0,
-  };
+  // Calculate total discounts
+  const feeStructures = await prisma.studentFeeStructure.findMany({
+    select: { discount: true },
+  });
+
+  const totalDiscount = feeStructures.reduce((sum, f) => {
+    const d = f.discount;
+    if (d && typeof d === 'object' && d.amount) {
+      return sum + Number(d.amount);
+    }
+    return sum;
+  }, 0);
+
+  const overdueCount = await prisma.feeInstallment.count({
+    where: { status: 'OVERDUE' },
+  });
 
   return {
-    ...metrics,
+    totalGross: aggregateResult._sum.grossAmount || 0,
+    totalDiscount,
+    totalNetPayable: aggregateResult._sum.netPayable || 0,
+    totalPaid: aggregateResult._sum.totalPaid || 0,
+    totalPending: aggregateResult._sum.totalPending || 0,
     overdueInstallmentsCount: overdueCount,
   };
 };
 
 export const listStudentFees = async (query) => {
-  const { page = 1, limit = 20, status, search } = query;
+  const page = Math.max(1, parseInt(query.page || '1', 10));
+  const limit = Math.min(100, Math.max(1, parseInt(query.limit || '20', 10)));
   const skip = (page - 1) * limit;
 
-  const filter = {};
-  if (status) {
-    filter.status = status;
+  const where = {};
+  if (query.status) {
+    where.status = query.status;
   }
 
-  let studentIds = null;
-  if (search) {
-    const matchingStudents = await Student.find({
-      $or: [
-        { 'personal.firstName': { $regex: search, $options: 'i' } },
-        { 'personal.lastName': { $regex: search, $options: 'i' } },
-        { studentCode: { $regex: search, $options: 'i' } },
-        { 'contact.phone': { $regex: search, $options: 'i' } },
+  if (query.search) {
+    const search = query.search.trim();
+    where.student = {
+      OR: [
+        { studentCode: { contains: search, mode: 'insensitive' } },
+        { user: { name: { contains: search, mode: 'insensitive' } } },
+        { user: { email: { contains: search, mode: 'insensitive' } } },
+        { user: { phone: { contains: search, mode: 'insensitive' } } },
       ],
-    }).select('_id');
-
-    studentIds = matchingStudents.map((s) => s._id);
-    filter.studentId = { $in: studentIds };
+    };
   }
 
-  const [data, total] = await Promise.all([
-    StudentFeeStructure.find(filter)
-      .populate('studentId', 'personal contact studentCode studentType')
-      .populate('courseId', 'name code fee')
-      .populate('batchId', 'name')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit),
-    StudentFeeStructure.countDocuments(filter),
+  const [fees, total] = await Promise.all([
+    prisma.studentFeeStructure.findMany({
+      where,
+      include: {
+        student: {
+          select: { id: true, personal: true, contact: true, studentCode: true, studentType: true },
+        },
+        course: {
+          select: { id: true, name: true, code: true, fee: true },
+        },
+        batch: {
+          select: { id: true, name: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.studentFeeStructure.count({ where }),
   ]);
 
   return {
-    data,
+    data: fees.map(formatFeeStructure),
     meta: {
       total,
       page,

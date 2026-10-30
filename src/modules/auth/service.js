@@ -1,10 +1,5 @@
 import crypto from 'crypto';
-import { User } from '../users/model.js';
-import { Session } from './session.model.js';
-import { Otp } from './otp.model.js';
-import { Role } from '../roles/model.js';
-import { Student } from '../students/model.js';
-import { Lead } from '../leads/model.js';
+import { prisma } from '../../config/database.js';
 import { AppError } from '../../common/errors/AppError.js';
 import { ROLES } from '../../common/constants/roles.js';
 import { comparePassword, hashPassword } from '../../common/utils/password.js';
@@ -26,11 +21,15 @@ export const authService = {
       throw new AppError('Email or mobile number is required.', 400, 'MISSING_IDENTIFIER');
     }
 
-    const user = await User.findOne({
-      $or: [{ email: cleanId }, { phone: cleanId }],
-    })
-      .select('+passwordHash')
-      .populate('roleIds');
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: cleanId }, { phone: cleanId }],
+      },
+      include: {
+        roles: true,
+        student: true,
+      },
+    });
 
     if (!user) {
       throw new AppError('Invalid email/mobile number or password.', 401, 'INVALID_CREDENTIALS');
@@ -40,46 +39,52 @@ export const authService = {
       throw new AppError(`Your account is ${user.status.toLowerCase()}. Please contact admin.`, 403, 'ACCOUNT_INACTIVE');
     }
 
+    if (!user.passwordHash) {
+      throw new AppError('Password login is not enabled for this account. Please use Google or OTP login.', 400, 'NO_PASSWORD_SET');
+    }
+
     const isMatch = await comparePassword(password, user.passwordHash);
     if (!isMatch) {
       throw new AppError('Invalid email or password.', 401, 'INVALID_CREDENTIALS');
     }
 
-    user.lastLoginAt = new Date();
-    await user.save();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
 
-    const role = user.roleIds[0]?.name || ROLES.STUDENT;
-
-    // Check if student details exist
-    let studentData = null;
-    if (role === ROLES.STUDENT) {
-      studentData = await Student.findOne({ userId: user._id });
-    }
+    const role = user.roles[0]?.name || ROLES.STUDENT;
+    const studentData = user.student;
 
     const tokenPayload = {
-      userId: user._id.toString(),
+      userId: user.id,
       email: user.email,
       role,
       studentType: studentData?.studentType || user.studentType,
       isEnrolled: studentData?.isEnrolled ?? (user.studentType === 'REGULAR'),
     };
     const accessToken = generateAccessToken(tokenPayload);
-    const refreshToken = generateRefreshToken({ userId: user._id.toString() });
+    const refreshToken = generateRefreshToken({ userId: user.id });
 
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000);
-    await Session.create({
-      userId: user._id,
-      refreshTokenHash: hashToken(refreshToken),
-      device: deviceInfo,
-      ipAddress,
-      expiresAt,
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshTokenHash: hashToken(refreshToken),
+        deviceType: deviceInfo.type || 'WEB',
+        browser: deviceInfo.browser || 'Unknown',
+        os: deviceInfo.os || 'Unknown',
+        ipAddress,
+        expiresAt,
+      },
     });
 
     return {
       accessToken,
       refreshToken,
       user: {
-        id: user._id.toString(),
+        id: user.id,
+        _id: user.id,
         name: user.name,
         email: user.email,
         phone: user.phone || null,
@@ -98,15 +103,17 @@ export const authService = {
     const cleanPhone = phone.trim();
 
     // Check if user already exists with email or phone
-    const existingUser = await User.findOne({
-      $or: [{ email: cleanEmail }, { phone: cleanPhone }],
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: cleanEmail }, { phone: cleanPhone }],
+      },
     });
 
     if (existingUser) {
       throw new AppError('An account with this email or mobile number already exists.', 400, 'USER_ALREADY_EXISTS');
     }
 
-    const studentRole = await Role.findOne({ name: ROLES.STUDENT });
+    const studentRole = await prisma.role.findUnique({ where: { name: ROLES.STUDENT } });
     if (!studentRole) {
       throw new AppError('STUDENT role is not configured.', 500, 'ROLE_MISSING');
     }
@@ -114,61 +121,77 @@ export const authService = {
     const passwordHash = await hashPassword(password);
     const fullName = `${firstName} ${lastName}`.trim();
 
-    const user = await User.create({
-      name: fullName,
-      email: cleanEmail,
-      phone: cleanPhone,
-      passwordHash,
-      authProvider: 'LOCAL',
-      studentType: 'ONLINE_GUEST',
-      roleIds: [studentRole._id],
-      status: 'ACTIVE',
-      lastLoginAt: new Date(),
-    });
+    // Create User, Lead, and Student in a transaction
+    const { user, student } = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          name: fullName,
+          email: cleanEmail,
+          phone: cleanPhone,
+          passwordHash,
+          authProvider: 'LOCAL',
+          studentType: 'ONLINE_GUEST',
+          status: 'ACTIVE',
+          lastLoginAt: new Date(),
+          roles: {
+            connect: [{ id: studentRole.id }],
+          },
+        },
+      });
 
-    // Create Lead record
-    const lead = await Lead.create({
-      name: fullName,
-      email: cleanEmail,
-      phone: cleanPhone,
-      source: 'SELF_REGISTER',
-      status: 'NEW',
-    });
+      const newLead = await tx.lead.create({
+        data: {
+          name: fullName,
+          email: cleanEmail,
+          phone: cleanPhone,
+          source: 'SELF_REGISTER',
+          status: 'NEW',
+        },
+      });
 
-    // Create Guest Student profile
-    await Student.create({
-      userId: user._id,
-      studentType: 'ONLINE_GUEST',
-      isEnrolled: false,
-      leadId: lead._id,
-      personal: { firstName, lastName },
-      contact: { email: cleanEmail, phone: cleanPhone },
+      const newStudent = await tx.student.create({
+        data: {
+          userId: newUser.id,
+          studentType: 'ONLINE_GUEST',
+          isEnrolled: false,
+          leadId: newLead.id,
+          personal: { firstName, lastName },
+          contact: { email: cleanEmail, phone: cleanPhone },
+        },
+      });
+
+      return { user: newUser, student: newStudent };
     });
 
     const tokenPayload = {
-      userId: user._id.toString(),
+      userId: user.id,
       email: user.email,
       role: ROLES.STUDENT,
       studentType: 'ONLINE_GUEST',
       isEnrolled: false,
     };
     const accessToken = generateAccessToken(tokenPayload);
-    const refreshToken = generateRefreshToken({ userId: user._id.toString() });
+    const refreshToken = generateRefreshToken({ userId: user.id });
 
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000);
-    await Session.create({
-      userId: user._id,
-      refreshTokenHash: hashToken(refreshToken),
-      device: deviceInfo,
-      ipAddress,
-      expiresAt,
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshTokenHash: hashToken(refreshToken),
+        deviceType: deviceInfo.type || 'WEB',
+        browser: deviceInfo.browser || 'Unknown',
+        os: deviceInfo.os || 'Unknown',
+        ipAddress,
+        expiresAt,
+      },
     });
 
     return {
       accessToken,
       refreshToken,
       user: {
-        id: user._id.toString(),
+        id: user.id,
+        _id: user.id,
         name: user.name,
         email: user.email,
         phone: user.phone,
@@ -184,23 +207,28 @@ export const authService = {
    */
   sendOtp: async ({ email, purpose = 'GUEST_SIGNUP' }) => {
     const cleanEmail = email.toLowerCase().trim();
-    // Generate secure 6-digit random code
     const rawOtp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpHash = crypto.createHash('sha256').update(rawOtp).digest('hex');
 
     // Invalidate existing active OTPs for this email and purpose
-    await Otp.deleteMany({ email: cleanEmail, purpose });
+    await prisma.otp.deleteMany({
+      where: {
+        email: cleanEmail,
+        purpose,
+      },
+    });
 
     // Store OTP with 10-minute expiry
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    await Otp.create({
-      email: cleanEmail,
-      otpHash,
-      purpose,
-      expiresAt,
+    await prisma.otp.create({
+      data: {
+        email: cleanEmail,
+        otpHash,
+        purpose,
+        expiresAt,
+      },
     });
 
-    // In development / testing, log OTP clearly to console for easy developer access
     console.log(`📩 [OTP Verification] Email: ${cleanEmail} | OTP: ${rawOtp} | Purpose: ${purpose}`);
 
     return {
@@ -216,9 +244,12 @@ export const authService = {
     const cleanEmail = email.toLowerCase().trim();
     const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
 
-    const otpRecord = await Otp.findOne({
-      email: cleanEmail,
-      otpHash: hashedOtp,
+    const otpRecord = await prisma.otp.findFirst({
+      where: {
+        email: cleanEmail,
+        otpHash: hashedOtp,
+        expiresAt: { gt: new Date() },
+      },
     });
 
     if (!otpRecord) {
@@ -226,72 +257,92 @@ export const authService = {
     }
 
     // Delete OTP once verified
-    await Otp.deleteOne({ _id: otpRecord._id });
+    await prisma.otp.delete({ where: { id: otpRecord.id } });
 
     // Find or create user
-    let user = await User.findOne({ email: cleanEmail }).populate('roleIds');
+    let user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+      include: { roles: true, student: true },
+    });
     let isNewUser = false;
 
     if (!user) {
       isNewUser = true;
-      const studentRole = await Role.findOne({ name: ROLES.STUDENT });
+      const studentRole = await prisma.role.findUnique({ where: { name: ROLES.STUDENT } });
       if (!studentRole) {
         throw new AppError('System role STUDENT is not configured.', 500, 'ROLE_MISSING');
       }
 
       const userName = name || cleanEmail.split('@')[0];
-      user = await User.create({
-        name: userName,
-        email: cleanEmail,
-        authProvider: 'OTP',
-        studentType: 'ONLINE_GUEST',
-        roleIds: [studentRole._id],
-        status: 'ACTIVE',
-      });
-      user = await user.populate('roleIds');
 
-      // Create Lead record
-      const lead = await Lead.create({
-        name: userName,
-        email: cleanEmail,
-        source: 'OTP_SIGNUP',
-        status: 'NEW',
-      });
+      user = await prisma.$transaction(async (tx) => {
+        const newUser = await tx.user.create({
+          data: {
+            name: userName,
+            email: cleanEmail,
+            authProvider: 'OTP',
+            studentType: 'ONLINE_GUEST',
+            status: 'ACTIVE',
+            roles: {
+              connect: [{ id: studentRole.id }],
+            },
+          },
+          include: { roles: true },
+        });
 
-      // Create Guest Student profile
-      await Student.create({
-        userId: user._id,
-        studentType: 'ONLINE_GUEST',
-        isEnrolled: false,
-        leadId: lead._id,
-        personal: { firstName: userName },
-        contact: { email: cleanEmail },
+        const newLead = await tx.lead.create({
+          data: {
+            name: userName,
+            email: cleanEmail,
+            source: 'OTP_SIGNUP',
+            status: 'NEW',
+          },
+        });
+
+        const newStudent = await tx.student.create({
+          data: {
+            userId: newUser.id,
+            studentType: 'ONLINE_GUEST',
+            isEnrolled: false,
+            leadId: newLead.id,
+            personal: { firstName: userName },
+            contact: { email: cleanEmail },
+          },
+        });
+
+        return { ...newUser, student: newStudent };
       });
     }
 
-    user.lastLoginAt = new Date();
-    await user.save();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
 
-    const role = user.roleIds[0]?.name || ROLES.STUDENT;
-    const studentData = await Student.findOne({ userId: user._id });
+    const role = user.roles[0]?.name || ROLES.STUDENT;
+    const studentData = user.student;
 
     const tokenPayload = {
-      userId: user._id.toString(),
+      userId: user.id,
       email: user.email,
       role,
       studentType: studentData?.studentType || user.studentType || 'ONLINE_GUEST',
       isEnrolled: studentData?.isEnrolled ?? false,
     };
     const accessToken = generateAccessToken(tokenPayload);
-    const refreshToken = generateRefreshToken({ userId: user._id.toString() });
+    const refreshToken = generateRefreshToken({ userId: user.id });
 
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000);
-    await Session.create({
-      userId: user._id,
-      refreshTokenHash: hashToken(refreshToken),
-      device: deviceInfo,
-      ipAddress,
-      expiresAt,
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshTokenHash: hashToken(refreshToken),
+        deviceType: deviceInfo.type || 'WEB',
+        browser: deviceInfo.browser || 'Unknown',
+        os: deviceInfo.os || 'Unknown',
+        ipAddress,
+        expiresAt,
+      },
     });
 
     return {
@@ -299,7 +350,8 @@ export const authService = {
       refreshToken,
       isNewUser,
       user: {
-        id: user._id.toString(),
+        id: user.id,
+        _id: user.id,
         name: user.name,
         email: user.email,
         phone: user.phone || null,
@@ -315,69 +367,95 @@ export const authService = {
    */
   googleAuth: async ({ email, name, googleId, picture, deviceInfo = {}, ipAddress = 'Unknown' }) => {
     const cleanEmail = email.toLowerCase().trim();
-    let user = await User.findOne({ email: cleanEmail }).populate('roleIds');
+    let user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+      include: { roles: true, student: true },
+    });
 
     if (!user) {
-      const studentRole = await Role.findOne({ name: ROLES.STUDENT });
-      user = await User.create({
-        name,
-        email: cleanEmail,
-        authProvider: 'GOOGLE',
-        googleId,
-        profileImage: picture || null,
-        studentType: 'ONLINE_GUEST',
-        roleIds: [studentRole._id],
-        status: 'ACTIVE',
-      });
-      user = await user.populate('roleIds');
+      const studentRole = await prisma.role.findUnique({ where: { name: ROLES.STUDENT } });
+      if (!studentRole) {
+        throw new AppError('System role STUDENT is not configured.', 500, 'ROLE_MISSING');
+      }
 
-      const lead = await Lead.create({
-        name,
-        email: cleanEmail,
-        source: 'GOOGLE_SIGNUP',
-        status: 'NEW',
-      });
+      user = await prisma.$transaction(async (tx) => {
+        const newUser = await tx.user.create({
+          data: {
+            name,
+            email: cleanEmail,
+            authProvider: 'GOOGLE',
+            googleId,
+            profileImage: picture || null,
+            studentType: 'ONLINE_GUEST',
+            status: 'ACTIVE',
+            roles: {
+              connect: [{ id: studentRole.id }],
+            },
+          },
+          include: { roles: true },
+        });
 
-      await Student.create({
-        userId: user._id,
-        studentType: 'ONLINE_GUEST',
-        isEnrolled: false,
-        leadId: lead._id,
-        personal: { firstName: name },
-        contact: { email: cleanEmail },
+        const newLead = await tx.lead.create({
+          data: {
+            name,
+            email: cleanEmail,
+            source: 'GOOGLE_SIGNUP',
+            status: 'NEW',
+          },
+        });
+
+        const newStudent = await tx.student.create({
+          data: {
+            userId: newUser.id,
+            studentType: 'ONLINE_GUEST',
+            isEnrolled: false,
+            leadId: newLead.id,
+            personal: { firstName: name },
+            contact: { email: cleanEmail },
+          },
+        });
+
+        return { ...newUser, student: newStudent };
       });
     }
 
-    user.lastLoginAt = new Date();
-    await user.save();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
 
-    const role = user.roleIds[0]?.name || ROLES.STUDENT;
-    const studentData = await Student.findOne({ userId: user._id });
+    const role = user.roles[0]?.name || ROLES.STUDENT;
+    const studentData = user.student;
 
     const tokenPayload = {
-      userId: user._id.toString(),
+      userId: user.id,
       email: user.email,
       role,
       studentType: studentData?.studentType || user.studentType || 'ONLINE_GUEST',
       isEnrolled: studentData?.isEnrolled ?? false,
     };
     const accessToken = generateAccessToken(tokenPayload);
-    const refreshToken = generateRefreshToken({ userId: user._id.toString() });
+    const refreshToken = generateRefreshToken({ userId: user.id });
 
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000);
-    await Session.create({
-      userId: user._id,
-      refreshTokenHash: hashToken(refreshToken),
-      device: deviceInfo,
-      ipAddress,
-      expiresAt,
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshTokenHash: hashToken(refreshToken),
+        deviceType: deviceInfo.type || 'WEB',
+        browser: deviceInfo.browser || 'Unknown',
+        os: deviceInfo.os || 'Unknown',
+        ipAddress,
+        expiresAt,
+      },
     });
 
     return {
       accessToken,
       refreshToken,
       user: {
-        id: user._id.toString(),
+        id: user.id,
+        _id: user.id,
         name: user.name,
         email: user.email,
         phone: user.phone || null,
@@ -404,26 +482,30 @@ export const authService = {
     }
 
     const hashed = hashToken(refreshToken);
-    const session = await Session.findOne({
-      refreshTokenHash: hashed,
-      userId: decoded.userId,
+    const session = await prisma.session.findUnique({
+      where: { refreshTokenHash: hashed },
     });
 
-    if (!session) {
+    if (!session || session.userId !== decoded.userId || new Date(session.expiresAt) <= new Date()) {
+      if (session) await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
       throw new AppError('Session expired or revoked. Please login again.', 401, 'SESSION_REVOKED');
     }
 
-    const user = await User.findById(decoded.userId).populate('roleIds');
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      include: { roles: true, student: true },
+    });
+
     if (!user || user.status !== 'ACTIVE') {
-      await Session.deleteOne({ _id: session._id });
+      await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
       throw new AppError('User not found or inactive.', 401, 'USER_INACTIVE');
     }
 
-    const role = user.roleIds[0]?.name || ROLES.STUDENT;
-    const studentData = await Student.findOne({ userId: user._id });
+    const role = user.roles[0]?.name || ROLES.STUDENT;
+    const studentData = user.student;
 
     const newAccessToken = generateAccessToken({
-      userId: user._id.toString(),
+      userId: user.id,
       email: user.email,
       role,
       studentType: studentData?.studentType || user.studentType,
@@ -441,7 +523,9 @@ export const authService = {
   logout: async ({ refreshToken }) => {
     if (refreshToken) {
       const hashed = hashToken(refreshToken);
-      await Session.deleteOne({ refreshTokenHash: hashed });
+      await prisma.session.deleteMany({
+        where: { refreshTokenHash: hashed },
+      });
     }
     return true;
   },
@@ -450,7 +534,9 @@ export const authService = {
    * Logout all sessions for a specific user
    */
   logoutAll: async ({ userId }) => {
-    await Session.deleteMany({ userId });
+    await prisma.session.deleteMany({
+      where: { userId },
+    });
     return true;
   },
 
@@ -458,19 +544,21 @@ export const authService = {
    * Get current authenticated user profile
    */
   getMe: async ({ userId }) => {
-    const user = await User.findById(userId).populate('roleIds');
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { roles: true, student: true },
+    });
+
     if (!user) {
       throw new AppError('User not found.', 404, 'USER_NOT_FOUND');
     }
 
-    const role = user.roleIds[0]?.name || ROLES.STUDENT;
-    let studentData = null;
-    if (role === ROLES.STUDENT) {
-      studentData = await Student.findOne({ userId: user._id });
-    }
+    const role = user.roles[0]?.name || ROLES.STUDENT;
+    const studentData = user.student;
 
     return {
-      id: user._id.toString(),
+      id: user.id,
+      _id: user.id,
       name: user.name,
       email: user.email,
       phone: user.phone || null,
@@ -487,7 +575,10 @@ export const authService = {
    * Change user password
    */
   changePassword: async ({ userId, oldPassword, newPassword }) => {
-    const user = await User.findById(userId).select('+passwordHash');
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
     if (!user) {
       throw new AppError('User not found.', 404, 'USER_NOT_FOUND');
     }
@@ -501,11 +592,17 @@ export const authService = {
       throw new AppError('Current password does not match.', 400, 'INCORRECT_PASSWORD');
     }
 
-    user.passwordHash = await hashPassword(newPassword);
-    await user.save();
+    const newHash = await hashPassword(newPassword);
 
-    // Invalidate existing sessions for security
-    await Session.deleteMany({ userId: user._id });
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: newHash },
+      }),
+      prisma.session.deleteMany({
+        where: { userId: user.id },
+      }),
+    ]);
 
     return true;
   },
