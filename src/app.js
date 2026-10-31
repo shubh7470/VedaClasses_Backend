@@ -39,6 +39,14 @@ app.get('/', (req, res) => {
   });
 });
 
+// Normalize duplicate slashes in request URLs (e.g. /api/v1//auth/login -> /api/v1/auth/login)
+app.use((req, res, next) => {
+  if (req.url && req.url.includes('//')) {
+    req.url = req.url.replace(/\/{2,}/g, '/');
+  }
+  next();
+});
+
 // API v1 Routes
 app.use('/api/v1', routes);
 
